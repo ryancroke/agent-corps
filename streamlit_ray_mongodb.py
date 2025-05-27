@@ -322,30 +322,51 @@ def show_server_status(session_data):
                         st.sidebar.caption(f"✅ Active: {timeline_data.get('active_steps_count', 0)}")
                         st.sidebar.caption(f"🗑️ Removed: {timeline_data.get('removed_steps_count', 0)}")
                     
-                    # Show active steps
+                    # Show active steps with clear resume functionality
                     if timeline_data.get("active_steps"):
                         st.sidebar.markdown("**🟢 Active Timeline:**")
+                        st.sidebar.markdown("*Click 'Resume' to go back to any step*")
+                        
                         for step in timeline_data["active_steps"]:
                             step_num = step["step"]
                             action = step["action"].replace("_", " ").title()
-                            has_result = "✅" if step["has_result"] else "❌"
+                            has_result = step["has_result"]
                             version = step.get("version", 1)
+                            user_input = step.get('user_input', 'N/A')
                             
-                            # Create button with version info
-                            button_text = f"Step {step_num}.{version}: {action} {has_result}"
-                            if st.sidebar.button(button_text, 
-                                               key=f"active_step_{step_num}",
-                                               help=f"Resume from: {step.get('user_input', 'N/A')[:50]}..."):
-                                # Resume from this step
-                                resume_response = requests.post(f"{BACKEND_URL}/session/{st.session_state.session_id}/resume/{step_num}")
-                                if resume_response.status_code == 200:
-                                    st.session_state.session_data = resume_response.json()
-                                    st.success(f"Resumed from step {step_num}")
-                                    st.rerun()
-                                else:
-                                    st.error("Failed to resume from step")
+                            # Create meaningful action descriptions
+                            action_map = {
+                                'Perform Internet Search': '🔍 Web Search',
+                                'Perform Github Search': '📂 GitHub Search', 
+                                'Perform Atlassian Search': '📋 Atlassian Search',
+                                'Generate General Ai Response': '🤖 AI Response',
+                                'Search Knowledge Base': '📚 Knowledge Base',
+                                'Search Sqlite': '🗄️ Database Search',
+                                'Perform Google Maps Search': '🗺️ Maps Search'
+                            }
+                            
+                            action_display = action_map.get(action, action)
+                            status_icon = "✅" if has_result else "⏳"
+                            
+                            # Make the entire step clickable
+                            is_selected = st.session_state.get('selected_step_for_history') == step_num
+                            button_type = "primary" if is_selected else "secondary"
+                            
+                            if st.sidebar.button(
+                                f"**Step {step_num}:** {action_display} {status_icon}\n*\"{user_input[:40]}{'...' if len(user_input) > 40 else ''}\"*",
+                                key=f"sidebar_step_{step_num}",
+                                help=f"Click to view conversation history up to step {step_num}",
+                                use_container_width=True,
+                                type=button_type
+                            ):
+                                st.session_state.selected_step_for_history = step_num
+                                st.rerun()
+                            
+
+                            
+                            st.sidebar.markdown("---")
                     
-                    # Show removed steps in an expander for observability
+                    # Show removed steps in a more compact way
                     if timeline_data.get("removed_steps"):
                         with st.sidebar.expander(f"🗑️ Removed Steps ({len(timeline_data['removed_steps'])})", expanded=False):
                             for step in timeline_data["removed_steps"]:
@@ -354,9 +375,12 @@ def show_server_status(session_data):
                                 version = step.get("version", 1)
                                 removed_reason = step.get("removed_reason", "Unknown")
                                 
+                                # More compact display for removed steps
                                 st.write(f"**Step {step_num}.{version}:** {action}")
-                                st.caption(f"Removed: {removed_reason}")
-                                st.caption(f"At: {step.get('removed_at', 'Unknown')[-8:]}")
+                                st.caption(f"🗑️ {removed_reason}")
+                                if step.get('removed_at'):
+                                    st.caption(f"⏰ {step['removed_at'][-8:]}")
+                                st.markdown("---")
                     
                     st.sidebar.divider()
     except Exception as e:
@@ -543,19 +567,132 @@ async def main():
     tab1, tab2 = st.tabs(["💬 Chat", "📊 Conversation Graph"])
     
     with tab1:
-        # Display chat history
-        chat_history = session_data.get("chat_history", [])
-        for chat_message in chat_history:
+        # Check if user selected a specific step to view history from
+        selected_step = st.session_state.get('selected_step_for_history')
+        
+        if selected_step:
+            # Show conversation history from selected step with prominent header
+            st.markdown("---")
+            
+            # Create a prominent header section
+            header_col1, header_col2, header_col3 = st.columns([1, 2, 1])
+            
+            with header_col1:
+                if st.button("🔙 Back to Latest", key="back_to_full_chat", use_container_width=True):
+                    st.session_state.selected_step_for_history = None
+                    st.rerun()
+            
+            with header_col2:
+                st.markdown(f"### 📖 Viewing up to Step {selected_step}")
+                st.caption("You're viewing conversation history up to this point")
+            
+            with header_col3:
+                # Check if this is not the latest step to show resume option
+                try:
+                    timeline_response = requests.get(f"{BACKEND_URL}/session/{st.session_state.session_id}/timeline")
+                    if timeline_response.status_code == 200:
+                        timeline_data = timeline_response.json()["timeline"]
+                        active_steps = timeline_data.get("active_steps", [])
+                        latest_step = max([s["step"] for s in active_steps]) if active_steps else selected_step
+                        
+                        if selected_step < latest_step:
+                            if st.button(f"🔄 Resume from Step {selected_step}", key="resume_from_chat", type="primary", use_container_width=True):
+                                st.session_state.show_resume_confirmation = selected_step
+                                st.rerun()
+                        else:
+                            st.info("📍 Latest Step")
+                except:
+                    # Fallback: always show resume option
+                    if st.button(f"🔄 Resume from Step {selected_step}", key="resume_from_chat", type="primary", use_container_width=True):
+                        st.session_state.show_resume_confirmation = selected_step
+                        st.rerun()
+            
+            # Show resume confirmation if requested - make it more prominent
+            if st.session_state.get('show_resume_confirmation') == selected_step:
+                st.markdown("---")
+                
+                # Create a warning container with better styling
+                with st.container():
+                    st.error(f"⚠️ **Resume from Step {selected_step}?**")
+                    
+                    # Get steps that will be affected
+                    try:
+                        timeline_response = requests.get(f"{BACKEND_URL}/session/{st.session_state.session_id}/timeline")
+                        if timeline_response.status_code == 200:
+                            timeline_data = timeline_response.json()["timeline"]
+                            active_steps = timeline_data.get("active_steps", [])
+                            steps_after = [s for s in active_steps if s["step"] > selected_step]
+                            
+                            if steps_after:
+                                st.markdown(f"**This will remove {len(steps_after)} step(s) that come after Step {selected_step}:**")
+                                for step in steps_after:
+                                    action = step['action'].replace('_', ' ').title()
+                                    st.markdown(f"• **Step {step['step']}:** {action}")
+                            else:
+                                st.markdown("**No steps will be removed (you're already at the latest step).**")
+                    except:
+                        st.markdown("**This will remove any steps that come after this point.**")
+                    
+                    # Confirmation buttons with better layout
+                    confirm_col1, confirm_col2, confirm_col3 = st.columns([1, 1, 1])
+                    
+                    with confirm_col1:
+                        if st.button("✅ Yes, Resume Here", key="confirm_resume_chat", type="primary", use_container_width=True):
+                            with st.spinner(f"🔄 Resuming from step {selected_step}..."):
+                                try:
+                                    resume_response = requests.post(f"{BACKEND_URL}/session/{st.session_state.session_id}/resume/{selected_step}")
+                                    if resume_response.status_code == 200:
+                                        st.success(f"✅ Successfully resumed from step {selected_step}!")
+                                        st.balloons()
+                                        st.session_state.selected_step_for_history = None
+                                        st.session_state.show_resume_confirmation = None
+                                        time.sleep(1)
+                                        st.rerun()
+                                    else:
+                                        st.error(f"❌ Failed to resume from step {selected_step}")
+                                except Exception as e:
+                                    st.error(f"❌ Error resuming: {str(e)}")
+                    
+                    with confirm_col3:
+                        if st.button("❌ Cancel", key="cancel_resume_chat", use_container_width=True):
+                            st.session_state.show_resume_confirmation = None
+                            st.rerun()
+            
+            # Get the conversation history up to the selected step
+            try:
+                response = requests.get(f"{BACKEND_URL}/session/{st.session_state.session_id}/history/{selected_step}")
+                if response.status_code == 200:
+                    history_data = response.json()
+                    filtered_history = history_data.get("chat_history", [])
+                else:
+                    # Fallback: show all history
+                    filtered_history = session_data.get("chat_history", [])
+            except:
+                filtered_history = session_data.get("chat_history", [])
+            
+            st.markdown("---")
+        else:
+            # Show full conversation history
+            filtered_history = session_data.get("chat_history", [])
+        
+        # Display the chat history (either full or filtered)
+        if selected_step:
+            st.info(f"📖 Showing conversation up to Step {selected_step}")
+        
+        for chat_message in filtered_history:
             render_chat_message(chat_message)
 
-        # Get user input
-        prompt = st.chat_input("Ask me a question!", key="chat_input")
+        # Get user input (only show if viewing full conversation)
+        if not selected_step:
+            prompt = st.chat_input("Ask me a question!", key="chat_input")
 
-        if prompt:
-            # Process through FastAPI backend
-            with st.spinner("Processing your request..."):
-                await process_user_input(prompt)
-            st.rerun()
+            if prompt:
+                # Process through FastAPI backend
+                with st.spinner("Processing your request..."):
+                    await process_user_input(prompt)
+                st.rerun()
+        else:
+            st.info("💡 You're viewing historical conversation. Click 'Back to Latest' to continue chatting, or 'Resume' to continue from this point.")
     
     with tab2:
         st.markdown("### 📊 Conversation Visualization")
@@ -696,38 +833,70 @@ def create_conversation_graph(session_id: str):
                 node_x.append(x)
                 node_y.append(y)
                 
-                # Create shorter, more readable labels
+                # Create clear, descriptive labels
                 if node["type"] == "start":
                     node_text.append("🚀 START")
                     node_colors.append("#00C851")  # Bright green
                     node_sizes.append(35)
                 else:
-                    # Shorter step labels
+                    # Clear step labels with action description
                     step_label = f"Step {node['step_number']}"
-                    action_short = node['action'].replace('_', ' ').replace('perform ', '').replace('search ', '').replace('generate ', '').title()
-                    if len(action_short) > 15:
-                        action_short = action_short[:12] + "..."
-                    node_text.append(f"{step_label}\n{action_short}")
+                    action_full = node['action'].replace('_', ' ').title()
                     
-                    # Better color scheme
+                    # Create meaningful action descriptions
+                    action_map = {
+                        'Perform Internet Search': '🔍 Web Search',
+                        'Perform Github Search': '📂 GitHub Search', 
+                        'Perform Atlassian Search': '📋 Atlassian Search',
+                        'Generate General Ai Response': '🤖 AI Response',
+                        'Search Knowledge Base': '📚 Knowledge Base',
+                        'Search Sqlite': '🗄️ Database Search',
+                        'Perform Google Maps Search': '🗺️ Maps Search'
+                    }
+                    
+                    action_display = action_map.get(action_full, action_full)
+                    if len(action_display) > 20:
+                        action_display = action_display[:17] + "..."
+                    
+                    # Show user input preview for context
+                    user_preview = node['user_input'][:20] + "..." if len(node['user_input']) > 20 else node['user_input']
+                    
+                    node_text.append(f"{step_label}\n{action_display}\n\"{user_preview}\"")
+                    
+                    # Better color scheme with meaning
                     if node['has_result']:
-                        node_colors.append("#007BFF")  # Bright blue
+                        node_colors.append("#28A745")  # Green for completed
                     else:
-                        node_colors.append("#FFA500")  # Orange
-                    node_sizes.append(40)
+                        node_colors.append("#FFC107")  # Yellow for in progress
+                    node_sizes.append(50)
                 
                 # Create hover info
                 if node["type"] == "start":
                     hover_text = "🚀 <b>Start of conversation</b>"
                 else:
+                    # Get destination display
+                    destination = node.get('destination', 'general')
+                    destination_display = {
+                        'search_internet': '🌐 Internet',
+                        'search_github': '📂 GitHub', 
+                        'search_atlassian': '📋 Atlassian',
+                        'general_ai_response': '🤖 AI Assistant',
+                        'search_knowledge_base': '📚 Knowledge Base',
+                        'search_sqlite': '🗄️ Database',
+                        'search_google_maps': '🗺️ Maps',
+                        'email_assistant': '📧 Email',
+                        'general': '🤖 AI Assistant',
+                        'unknown': '❓ Unknown'
+                    }.get(destination, f"📍 {destination.replace('_', ' ').title()}")
+                    
                     hover_text = f"""
                     <b>Step {node['step_number']}.{node['version']}</b><br>
-                    Action: {node['action'].replace('_', ' ').title()}<br>
-                    Destination: {node.get('destination', 'N/A').replace('_', ' ').title()}<br>
-                    Has Result: {'✅ Yes' if node['has_result'] else '❌ No'}<br>
-                    Status: 🟢 Active<br>
+                    Action: {action_display}<br>
+                    Destination: {destination_display}<br>
+                    Status: {'✅ Completed' if node['has_result'] else '⏳ In Progress'}<br>
                     Timestamp: {node['timestamp'][:19]}<br>
-                    User Input: {node['user_input'][:50]}...
+                    User Input: "{node['user_input'][:60]}..."<br>
+                    <i>Click to view full conversation history from this step</i>
                     """
                 
                 node_info.append(hover_text)
@@ -784,10 +953,24 @@ def create_conversation_graph(session_id: str):
                 removed_sizes.append(30)
                 
                 # Create hover info for removed nodes
+                destination = node.get('destination', 'general')
+                destination_display = {
+                    'search_internet': '🌐 Internet',
+                    'search_github': '📂 GitHub', 
+                    'search_atlassian': '📋 Atlassian',
+                    'general_ai_response': '🤖 AI Assistant',
+                    'search_knowledge_base': '📚 Knowledge Base',
+                    'search_sqlite': '🗄️ Database',
+                    'search_google_maps': '🗺️ Maps',
+                    'email_assistant': '📧 Email',
+                    'general': '🤖 AI Assistant',
+                    'unknown': '❓ Unknown'
+                }.get(destination, f"📍 {destination.replace('_', ' ').title()}")
+                
                 hover_text = f"""
                 <b>Step {node['step_number']}.{node['version']} (Removed)</b><br>
                 Action: {node['action'].replace('_', ' ').title()}<br>
-                Destination: {node.get('destination', 'N/A').replace('_', ' ').title()}<br>
+                Destination: {destination_display}<br>
                 Has Result: {'✅ Yes' if node['has_result'] else '❌ No'}<br>
                 Status: 🔴 Removed<br>
                 Timestamp: {node['timestamp'][:19]}<br>
@@ -892,6 +1075,9 @@ def create_conversation_graph(session_id: str):
         # Display the graph
         st.plotly_chart(fig, use_container_width=True)
         
+        # Add a note about clicking steps
+        st.info("💡 **Tip:** Click on any step in the timeline controls below to view conversation history up to that point.")
+        
         # Add enhanced graph statistics and controls
         add_graph_controls_and_stats(nodes, stats, session_id)
         
@@ -932,17 +1118,37 @@ def create_simple_graph_visualization(nodes, edges, stats, session_id):
             status_icon = "🟢"
             result_icon = "✅" if node["has_result"] else "❌"
             
-            # Create a more visual representation
-            col1, col2 = st.columns([1, 4])
-            with col1:
-                st.markdown(f"**{status_icon} Step {node['step_number']}**")
-            with col2:
-                action_clean = node['action'].replace('_', ' ').title()
-                destination_clean = node.get('destination', 'N/A').replace('_', ' ').title()
-                
-                st.markdown(f"**{action_clean}** {result_icon}")
-                st.caption(f"Destination: {destination_clean}")
-                st.caption(f"Time: {node['timestamp'][:19]} | Input: {node['user_input'][:50]}...")
+            # Create a clickable step box
+            action_clean = node['action'].replace('_', ' ').title()
+            destination = node.get('destination', 'general')
+            destination_display = {
+                'search_internet': '🌐 Internet',
+                'search_github': '📂 GitHub', 
+                'search_atlassian': '📋 Atlassian',
+                'general_ai_response': '🤖 AI Assistant',
+                'search_knowledge_base': '📚 Knowledge Base',
+                'search_sqlite': '🗄️ Database',
+                'search_google_maps': '🗺️ Maps',
+                'email_assistant': '📧 Email',
+                'general': '🤖 AI Assistant',
+                'unknown': '❓ Unknown'
+            }.get(destination, f"📍 {destination.replace('_', ' ').title()}")
+            
+            # Make the entire step clickable
+            is_selected = st.session_state.get('selected_step_for_history') == node['step_number']
+            button_type = "primary" if is_selected else "secondary"
+            
+            if st.button(
+                f"{status_icon} **Step {node['step_number']}:** {action_clean} {result_icon}\n"
+                f"📍 {destination_display}\n"
+                f"🕐 {node['timestamp'][:19]} | 💬 {node['user_input'][:50]}...",
+                key=f"simple_step_{node['step_number']}",
+                help=f"Click to view conversation history up to step {node['step_number']}",
+                use_container_width=True,
+                type=button_type
+            ):
+                st.session_state.selected_step_for_history = node['step_number']
+                st.rerun()
             
             # Add connection arrow if not the last step
             if i < len(active_step_nodes) - 1:
@@ -1054,66 +1260,129 @@ def add_graph_controls_and_stats(nodes, stats, session_id):
     if stats.get('versions', 1) > 1:
         st.info(f"🔄 **Timeline Version {stats.get('current_version', 1)}** - This conversation has branched {stats.get('versions', 1)} times due to resume actions.")
     
-    # Interactive controls with better organization
-    st.markdown("### 🎛️ Graph Controls")
+    # Modern Interactive Controls Section
+    st.markdown("### 🎛️ Timeline Controls")
     
-    col1, col2, col3 = st.columns(3)
+    # Create tabs for different control types
+    control_tab1, control_tab2, control_tab3 = st.tabs(["🔄 Timeline Management", "📊 Data & Export", "🔍 Step Details"])
     
-    with col1:
-        st.markdown("**🔄 Actions**")
-        if st.button("🔄 Refresh Graph", help="Reload the conversation graph", use_container_width=True):
-            st.rerun()
-    
-    with col2:
-        st.markdown("**📊 Data**")
-        if st.button("📊 View Raw Data", help="Show the raw graph data structure", use_container_width=True):
-            with st.expander("Raw Graph Data", expanded=True):
-                st.json({
-                    "session_id": session_id,
-                    "total_nodes": len(nodes),
-                    "node_types": {
-                        "start": len([n for n in nodes if n["type"] == "start"]),
-                        "active_steps": len([n for n in nodes if n["type"] == "step" and n["is_active"]]),
-                        "removed_steps": len([n for n in nodes if n["type"] == "step" and not n["is_active"]])
-                    },
-                    "statistics": stats
-                })
-    
-    with col3:
-        st.markdown("**🔄 Resume**")
-        # Quick resume functionality
+    with control_tab1:
+        st.markdown("#### 🕰️ Timeline Navigation")
+        
+        # Get active steps for resume functionality
         active_steps = [node for node in nodes if node["type"] == "step" and node["is_active"]]
+        
         if active_steps:
-            step_options = [f"Step {node['step_number']}: {node['action'].replace('_', ' ').title()}" 
-                          for node in active_steps]
-            selected_step = st.selectbox(
-                "Quick Resume",
-                ["Select step..."] + step_options,
-                help="Resume conversation from any active step (creates a new timeline branch)",
-                label_visibility="collapsed"
-            )
+            st.markdown("**📍 Click on any step to view conversation history up to that point:**")
             
-            if selected_step != "Select step...":
-                step_num = int(selected_step.split(":")[0].split(" ")[1])
-                if st.button(f"🔄 Resume from Step {step_num}", key="quick_resume", use_container_width=True):
-                    try:
-                        resume_response = requests.post(f"{BACKEND_URL}/session/{session_id}/resume/{step_num}")
-                        if resume_response.status_code == 200:
-                            st.success(f"✅ Resumed from step {step_num}! New timeline branch created.")
-                            st.info("💡 Previous steps after this point moved to removed branch for observability.")
-                            time.sleep(1)  # Brief pause to show message
-                            st.rerun()
-                        else:
-                            st.error("❌ Failed to resume from step")
-                    except Exception as e:
-                        st.error(f"Error resuming: {str(e)}")
+            # Create a clear, intuitive step list
+            for step in sorted(active_steps, key=lambda x: x['step_number']):
+                step_num = step['step_number']
+                action = step['action'].replace('_', ' ').title()
+                user_input = step['user_input']
+                has_result = step['has_result']
+                timestamp = step['timestamp'][:19].replace('T', ' ')
+                
+                # Create meaningful action descriptions
+                action_map = {
+                    'Perform Internet Search': '🔍 Web Search',
+                    'Perform Github Search': '📂 GitHub Search', 
+                    'Perform Atlassian Search': '📋 Atlassian Search',
+                    'Generate General Ai Response': '🤖 AI Response',
+                    'Search Knowledge Base': '📚 Knowledge Base',
+                    'Search Sqlite': '🗄️ Database Search',
+                    'Perform Google Maps Search': '🗺️ Maps Search'
+                }
+                
+                action_display = action_map.get(action, action)
+                result_badge = "✅ Completed" if has_result else "⏳ In Progress"
+                
+                # Get destination information
+                destination = step.get('destination', 'general')
+                destination_display = {
+                    'search_internet': '🌐 Internet',
+                    'search_github': '📂 GitHub', 
+                    'search_atlassian': '📋 Atlassian',
+                    'general_ai_response': '🤖 AI Assistant',
+                    'search_knowledge_base': '📚 Knowledge Base',
+                    'search_sqlite': '🗄️ Database',
+                    'search_google_maps': '🗺️ Maps',
+                    'email_assistant': '📧 Email',
+                    'general': '🤖 AI Assistant',
+                    'unknown': '❓ Unknown'
+                }.get(destination, f"📍 {destination.replace('_', ' ').title()}")
+                
+                # Create a clickable step card
+                is_selected = st.session_state.get('selected_step_for_history') == step_num
+                button_type = "primary" if is_selected else "secondary"
+                
+                if st.button(
+                    f"**Step {step_num}:** {action_display} → {destination_display}\n"
+                    f"{result_badge} | 🕐 {timestamp[-8:]}\n"
+                    f"*\"{user_input[:50]}{'...' if len(user_input) > 50 else ''}\"*",
+                    key=f"timeline_step_{step_num}",
+                    use_container_width=True,
+                    help=f"Click to view conversation history up to step {step_num}",
+                    type=button_type
+                ):
+                    st.session_state.selected_step_for_history = step_num
+                    st.rerun()
+                
+                st.markdown("---")
+            
+            # Show selected step info
+            if st.session_state.get('selected_step_for_history'):
+                selected_step_num = st.session_state.selected_step_for_history
+                st.markdown("---")
+                st.success(f"📖 **Currently viewing conversation up to Step {selected_step_num}**")
+                st.info("💡 Go to the **Chat** tab to see the conversation history and resume options.")
+                
+                if st.button(
+                    "🔙 Clear Selection",
+                    key=f"clear_selection_{selected_step_num}",
+                    use_container_width=True
+                ):
+                    st.session_state.selected_step_for_history = None
+                    st.rerun()
         else:
-            st.info("No active steps available for resume")
+            st.info("🚫 No active steps available for timeline navigation")
+        
+        # Quick actions
+        st.markdown("#### ⚡ Quick Actions")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Refresh Timeline", help="Reload the conversation graph", use_container_width=True):
+                st.rerun()
+        with col2:
+            if st.button("🏠 Go to Latest", help="Go back to the most recent step", use_container_width=True):
+                if active_steps:
+                    latest_step = max(active_steps, key=lambda x: x['step_number'])['step_number']
+                    st.session_state.selected_step_for_history = None
+                    st.info(f"Viewing latest step: {latest_step}")
+                    st.rerun()
+                else:
+                    st.warning("No active steps to reset to")
     
-    # Timeline branch analysis with better styling
+    with control_tab2:
+        st.markdown("#### 📊 Data Export & Analysis")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📊 View Graph Data", help="Show detailed graph structure", use_container_width=True):
+                show_graph_data_modal(nodes, stats, session_id)
+        
+        with col2:
+            if st.button("📋 Export Timeline", help="Export timeline as JSON", use_container_width=True):
+                export_timeline_data(nodes, stats, session_id)
+    
+    with control_tab3:
+        show_detailed_step_information(nodes, stats)
+    
+    # Timeline branch analysis with modern design
     removed_nodes = [node for node in nodes if node["type"] == "step" and not node["is_active"]]
     if removed_nodes:
-        st.markdown("### 🌿 Timeline Branch Analysis")
+        st.markdown("### 🌿 Timeline Branches")
+        st.markdown("*Explore removed steps organized by timeline branches*")
         
         # Group removed nodes by branch
         branches = {}
@@ -1123,118 +1392,425 @@ def add_graph_controls_and_stats(nodes, stats, session_id):
                 branches[branch_info] = []
             branches[branch_info].append(node)
         
-        for branch_key, branch_nodes in branches.items():
-            if isinstance(branch_key, int):
-                branch_title = f"🌿 Branch from Step {branch_key}"
-                branch_desc = f"Timeline branch created when resuming from step {branch_key}"
-            else:
-                branch_title = "🗑️ Other Removed Steps"
-                branch_desc = "Steps removed for other reasons"
-            
-            with st.expander(f"{branch_title} ({len(branch_nodes)} steps)", expanded=False):
-                st.caption(branch_desc)
-                
-                # Create a mini timeline for this branch
-                for i, node in enumerate(sorted(branch_nodes, key=lambda x: x['step_number'])):
-                    result_icon = "✅" if node['has_result'] else "❌"
-                    
-                    col1, col2 = st.columns([1, 4])
-                    with col1:
-                        st.markdown(f"**Step {node['step_number']}.{node['version']}**")
-                    with col2:
-                        action_clean = node['action'].replace('_', ' ').title()
-                        st.markdown(f"**{action_clean}** {result_icon}")
-                        st.caption(f"Removed: {node.get('removed_reason', 'Unknown')}")
-                        if node.get('removed_at'):
-                            st.caption(f"At: {node['removed_at'][:19]}")
-                    
-                    # Add arrow if not last
-                    if i < len(branch_nodes) - 1:
-                        st.markdown("&nbsp;&nbsp;&nbsp;&nbsp;⬇️")
-    
-    # Show detailed step information with better styling
-    if st.checkbox("📋 Show Detailed Step Information", value=False):
-        st.markdown("### 📋 Detailed Step Information")
-        
-        # Create tabs for active vs removed steps
-        if removed_nodes:
-            tab1, tab2 = st.tabs(["🟢 Active Timeline", "🔴 Removed Branches"])
+        # Create columns for branches if there are multiple
+        if len(branches) > 1:
+            branch_cols = st.columns(min(len(branches), 3))
         else:
-            tab1 = st.container()
-            tab2 = None
+            branch_cols = [st.container()]
+        
+        for i, (branch_key, branch_nodes) in enumerate(branches.items()):
+            col_idx = i % 3 if len(branches) > 1 else 0
+            
+            with branch_cols[col_idx]:
+                if isinstance(branch_key, int):
+                    branch_title = f"🌿 Branch from Step {branch_key}"
+                    branch_desc = f"Created when resuming from step {branch_key}"
+                else:
+                    branch_title = "🗑️ Other Removed Steps"
+                    branch_desc = "Steps removed for other reasons"
+                
+                with st.expander(f"{branch_title} ({len(branch_nodes)} steps)", expanded=False):
+                    st.caption(branch_desc)
+                    
+                    # Create a mini timeline for this branch
+                    for j, node in enumerate(sorted(branch_nodes, key=lambda x: x['step_number'])):
+                        result_icon = "✅" if node['has_result'] else "❌"
+                        
+                        # Create a card-like display for each removed step
+                        with st.container():
+                            step_col1, step_col2 = st.columns([1, 3])
+                            with step_col1:
+                                st.markdown(f"**Step {node['step_number']}.{node['version']}**")
+                            with step_col2:
+                                action_clean = node['action'].replace('_', ' ').title()
+                                st.markdown(f"**{action_clean}** {result_icon}")
+                                st.caption(f"🗑️ {node.get('removed_reason', 'Unknown')}")
+                        
+                        # Add visual separator
+                        if j < len(branch_nodes) - 1:
+                            st.markdown("&nbsp;&nbsp;&nbsp;&nbsp;⬇️")
+
+
+def show_conversation_history_from_step(selected_step: int, active_steps: list, session_id: str):
+    """Show conversation history from the selected step with resume option"""
+    
+    st.markdown("---")
+    st.markdown(f"### 📖 Conversation History from Step {selected_step}")
+    
+    # Get steps from selected step onwards
+    steps_from_selected = [s for s in active_steps if s['step_number'] >= selected_step]
+    steps_from_selected.sort(key=lambda x: x['step_number'])
+    
+    if not steps_from_selected:
+        st.error("No steps found from the selected point")
+        return
+    
+    # Show the conversation flow from this step
+    st.markdown(f"**Showing conversation from Step {selected_step} onwards:**")
+    
+    for i, step in enumerate(steps_from_selected):
+        step_num = step['step_number']
+        action = step['action'].replace('_', ' ').title()
+        user_input = step['user_input']
+        has_result = step['has_result']
+        timestamp = step['timestamp'][:19].replace('T', ' ')
+        
+        # Create meaningful action descriptions
+        action_map = {
+            'Perform Internet Search': '🔍 Web Search',
+            'Perform Github Search': '📂 GitHub Search', 
+            'Perform Atlassian Search': '📋 Atlassian Search',
+            'Generate General Ai Response': '🤖 AI Response',
+            'Search Knowledge Base': '📚 Knowledge Base',
+            'Search Sqlite': '🗄️ Database Search',
+            'Perform Google Maps Search': '🗺️ Maps Search'
+        }
+        
+        action_display = action_map.get(action, action)
+        result_icon = "✅" if has_result else "⏳"
+        
+        # Highlight the selected step
+        if step_num == selected_step:
+            st.success(f"**👉 Step {step_num} (Selected):** {action_display} {result_icon}")
+        else:
+            st.info(f"**Step {step_num}:** {action_display} {result_icon}")
+        
+        # Show user input and any results
+        with st.expander(f"Details for Step {step_num}", expanded=(step_num == selected_step)):
+            st.markdown(f"**User Input:** *\"{user_input}\"*")
+            st.markdown(f"**Action Taken:** {action_display}")
+            st.markdown(f"**Status:** {'Completed' if has_result else 'In Progress'}")
+            st.markdown(f"**Timestamp:** {timestamp}")
+            
+            # Try to get and show the actual result if available
+            try:
+                step_response = requests.get(f"{BACKEND_URL}/session/{session_id}/step/{step_num}")
+                if step_response.status_code == 200:
+                    step_data = step_response.json()
+                    if step_data.get('result'):
+                        st.markdown("**Result:**")
+                        st.text_area("", value=str(step_data['result'])[:500] + "..." if len(str(step_data['result'])) > 500 else str(step_data['result']), height=100, disabled=True, key=f"result_{step_num}")
+                    else:
+                        st.markdown("**Result:** *No result available*")
+                else:
+                    st.markdown("**Result:** *Could not fetch result*")
+            except:
+                st.markdown("**Result:** *Could not fetch result*")
+        
+        # Add flow arrow if not the last step
+        if i < len(steps_from_selected) - 1:
+            st.markdown("&nbsp;&nbsp;&nbsp;&nbsp;⬇️")
+    
+    # Show resume option if not already at the selected step
+    steps_after_selected = [s for s in active_steps if s['step_number'] > selected_step]
+    
+    if steps_after_selected:
+        st.markdown("---")
+        st.markdown("### 🔄 Resume Option")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            st.warning(f"**Resume from Step {selected_step}?**")
+            st.markdown(f"This will remove **{len(steps_after_selected)} step(s)** that come after Step {selected_step}:")
+            
+            for step in steps_after_selected:
+                action = step['action'].replace('_', ' ').title()
+                action_map = {
+                    'Perform Internet Search': '🔍 Web Search',
+                    'Perform Github Search': '📂 GitHub Search', 
+                    'Perform Atlassian Search': '📋 Atlassian Search',
+                    'Generate General Ai Response': '🤖 AI Response',
+                    'Search Knowledge Base': '📚 Knowledge Base',
+                    'Search Sqlite': '🗄️ Database Search',
+                    'Perform Google Maps Search': '🗺️ Maps Search'
+                }
+                action_display = action_map.get(action, action)
+                st.markdown(f"• **Step {step['step_number']}:** {action_display}")
+        
+        with col2:
+            st.markdown("**Actions:**")
+            
+            if st.button(
+                f"✅ Resume from Step {selected_step}",
+                key=f"main_resume_{selected_step}",
+                type="primary",
+                use_container_width=True,
+                help=f"Resume conversation from step {selected_step}"
+            ):
+                perform_resume_action(selected_step, session_id)
+            
+            if st.button(
+                "❌ Cancel",
+                key=f"main_cancel_{selected_step}",
+                use_container_width=True,
+                help="Cancel and go back to timeline view"
+            ):
+                st.session_state.selected_step_for_history = None
+                st.rerun()
+    else:
+        st.info(f"✅ Step {selected_step} is already the latest step. No resume needed.")
+        
+        if st.button(
+            "🔙 Back to Timeline",
+            key=f"back_to_timeline_{selected_step}",
+            use_container_width=True
+        ):
+            st.session_state.selected_step_for_history = None
+            st.rerun()
+
+
+def show_resume_confirmation(step_num: int, active_steps: list, session_id: str):
+    """Show a clear confirmation dialog for resume action"""
+    
+    # Find the selected step
+    selected_step = next((s for s in active_steps if s['step_number'] == step_num), None)
+    if not selected_step:
+        return
+    
+    # Show what will happen
+    steps_after = [s for s in active_steps if s['step_number'] > step_num]
+    
+    # Create a warning box
+    if steps_after:
+        st.warning(f"⚠️ **Warning:** Resuming from Step {step_num} will remove {len(steps_after)} step(s) that come after it.")
+        
+        # Show which steps will be removed
+        st.markdown("**Steps that will be removed:**")
+        for step in steps_after:
+            action = step['action'].replace('_', ' ').title()
+            st.markdown(f"• **Step {step['step_number']}:** {action}")
+    else:
+        st.info("ℹ️ You're already at the latest step. No steps will be removed.")
+    
+    # Confirmation buttons
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button(
+            f"✅ Yes, Resume from Step {step_num}", 
+            key=f"confirm_yes_{step_num}",
+            type="primary",
+            use_container_width=True
+        ):
+            # Clear the confirmation state
+            st.session_state[f'confirm_resume_{step_num}'] = False
+            perform_resume_action(step_num, session_id)
+    
+    with col2:
+        if st.button(
+            "❌ Cancel", 
+            key=f"confirm_no_{step_num}",
+            use_container_width=True
+        ):
+            # Clear the confirmation state
+            st.session_state[f'confirm_resume_{step_num}'] = False
+            st.rerun()
+
+
+def perform_resume_action(step_num: int, session_id: str):
+    """Perform the actual resume action with user feedback"""
+    
+    with st.spinner(f"🔄 Resuming from step {step_num}..."):
+        try:
+            resume_response = requests.post(f"{BACKEND_URL}/session/{session_id}/resume/{step_num}")
+            if resume_response.status_code == 200:
+                st.success(f"✅ Successfully resumed from step {step_num}!")
+                st.info("💡 Previous steps have been preserved in timeline branches for reference")
+                
+                # Show a brief success animation
+                progress_bar = st.progress(0)
+                for i in range(100):
+                    time.sleep(0.01)
+                    progress_bar.progress(i + 1)
+                
+                st.balloons()  # Celebration animation
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error(f"❌ Failed to resume from step {step_num}")
+                st.error(f"Server response: {resume_response.status_code}")
+        except Exception as e:
+            st.error(f"❌ Error during resume operation: {str(e)}")
+
+
+def show_step_details_modal(step: dict):
+    """Show detailed information about a step in a modal-like display"""
+    
+    with st.expander(f"🔍 Step {step['step_number']} Details", expanded=True):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**📋 Basic Information**")
+            st.markdown(f"**Step Number:** {step['step_number']}.{step['version']}")
+            st.markdown(f"**Action:** {step['action'].replace('_', ' ').title()}")
+            st.markdown(f"**Destination:** {step.get('destination', 'N/A').replace('_', ' ').title()}")
+            st.markdown(f"**Has Result:** {'✅ Yes' if step['has_result'] else '❌ No'}")
+            st.markdown(f"**Status:** {'🟢 Active' if step['is_active'] else '🔴 Removed'}")
+        
+        with col2:
+            st.markdown("**⏰ Timing Information**")
+            st.markdown(f"**Timestamp:** {step['timestamp'][:19]}")
+            if not step['is_active']:
+                st.markdown(f"**Removed At:** {step.get('removed_at', 'Unknown')}")
+                st.markdown(f"**Removed Reason:** {step.get('removed_reason', 'Unknown')}")
+        
+        st.markdown("**💬 User Input**")
+        st.text_area("", value=step['user_input'], height=100, disabled=True, key=f"input_{step['step_number']}")
+
+
+def show_graph_data_modal(nodes: list, stats: dict, session_id: str):
+    """Show graph data in a modal-like display"""
+    
+    with st.expander("📊 Graph Data Structure", expanded=True):
+        tab1, tab2, tab3 = st.tabs(["📈 Statistics", "🔗 Nodes", "📋 Raw Data"])
         
         with tab1:
-            if PLOTLY_AVAILABLE:
-                active_step_data = []
+            col1, col2 = st.columns(2)
+            with col1:
+                st.json({
+                    "session_id": session_id[:8] + "...",
+                    "total_nodes": len(nodes),
+                    "statistics": stats
+                })
+            with col2:
+                node_types = {}
                 for node in nodes:
-                    if node["type"] == "step" and node["is_active"]:
-                        active_step_data.append({
-                            "Step": f"{node['step_number']}.{node['version']}",
-                            "Action": node['action'].replace('_', ' ').title(),
-                            "Destination": node.get('destination', 'N/A').replace('_', ' ').title(),
-                            "Has Result": "✅ Yes" if node['has_result'] else "❌ No",
-                            "Timestamp": node['timestamp'][:19],
-                            "User Input": node['user_input'][:50] + "..." if len(node['user_input']) > 50 else node['user_input']
-                        })
-                
-                if active_step_data:
-                    df = pd.DataFrame(active_step_data)
-                    st.dataframe(df, use_container_width=True)
-                else:
-                    st.info("No active steps to display")
-            else:
-                # Simple text-based table for active steps
-                active_nodes = [node for node in nodes if node["type"] == "step" and node["is_active"]]
-                if active_nodes:
-                    for node in sorted(active_nodes, key=lambda x: x['step_number']):
-                        with st.container():
-                            col1, col2 = st.columns([1, 4])
-                            with col1:
-                                st.markdown(f"**Step {node['step_number']}.{node['version']}**")
-                            with col2:
-                                action_clean = node['action'].replace('_', ' ').title()
-                                result_status = "✅ Yes" if node['has_result'] else "❌ No"
-                                st.markdown(f"**{action_clean}** | Result: {result_status}")
-                                st.caption(f"Time: {node['timestamp'][:19]}")
-                                st.caption(f"Input: {node['user_input'][:50]}...")
-                            st.markdown("---")
-                else:
-                    st.info("No active steps to display")
+                    node_type = f"{node['type']}_{'active' if node.get('is_active', True) else 'removed'}"
+                    node_types[node_type] = node_types.get(node_type, 0) + 1
+                st.json({"node_breakdown": node_types})
         
-        if tab2 and removed_nodes:
-            with tab2:
-                if PLOTLY_AVAILABLE:
-                    removed_step_data = []
-                    for node in removed_nodes:
-                        removed_step_data.append({
-                            "Step": f"{node['step_number']}.{node['version']}",
-                            "Action": node['action'].replace('_', ' ').title(),
-                            "Destination": node.get('destination', 'N/A').replace('_', ' ').title(),
-                            "Has Result": "✅ Yes" if node['has_result'] else "❌ No",
-                            "Branch": f"Branch {node.get('branch_index', '?')}" if node.get('branch_index') else "Unknown",
-                            "Removed Reason": node.get('removed_reason', 'Unknown'),
-                            "Timestamp": node['timestamp'][:19],
-                            "User Input": node['user_input'][:50] + "..." if len(node['user_input']) > 50 else node['user_input']
-                        })
+        with tab2:
+            for node in nodes:
+                if node["type"] != "start":
+                    status = "🟢 Active" if node["is_active"] else "🔴 Removed"
+                    st.markdown(f"**{status} Step {node['step_number']}.{node['version']}:** {node['action'].replace('_', ' ').title()}")
+        
+        with tab3:
+            st.json({
+                "session_id": session_id,
+                "total_nodes": len(nodes),
+                "statistics": stats,
+                "sample_node": nodes[0] if nodes else None
+            })
+
+
+def export_timeline_data(nodes: list, stats: dict, session_id: str):
+    """Export timeline data as downloadable JSON"""
+    
+    export_data = {
+        "session_id": session_id,
+        "export_timestamp": datetime.utcnow().isoformat(),
+        "statistics": stats,
+        "nodes": nodes
+    }
+    
+    st.download_button(
+        label="📥 Download Timeline Data",
+        data=json.dumps(export_data, indent=2),
+        file_name=f"timeline_{session_id[:8]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        mime="application/json",
+        help="Download complete timeline data as JSON file"
+    )
+
+
+def show_detailed_step_information(nodes: list, stats: dict):
+    """Show detailed step information in a modern tabbed interface"""
+    
+    st.markdown("#### 📋 Step Information")
+    
+    # Separate active and removed nodes
+    active_nodes = [node for node in nodes if node["type"] == "step" and node["is_active"]]
+    removed_nodes = [node for node in nodes if node["type"] == "step" and not node["is_active"]]
+    
+    if not active_nodes and not removed_nodes:
+        st.info("No steps to display")
+        return
+    
+    # Create tabs for different views
+    if removed_nodes:
+        tab1, tab2 = st.tabs([f"🟢 Active Timeline ({len(active_nodes)})", f"🔴 Removed Branches ({len(removed_nodes)})"])
+    else:
+        tab1 = st.container()
+        tab2 = None
+    
+    with tab1:
+        if active_nodes:
+            if PLOTLY_AVAILABLE:
+                # Create a modern dataframe view
+                active_step_data = []
+                for node in sorted(active_nodes, key=lambda x: x['step_number']):
+                    # Create meaningful action descriptions
+                    action_map = {
+                        'Perform Internet Search': '🔍 Web Search',
+                        'Perform Github Search': '📂 GitHub Search', 
+                        'Perform Atlassian Search': '📋 Atlassian Search',
+                        'Generate General Ai Response': '🤖 AI Response',
+                        'Search Knowledge Base': '📚 Knowledge Base',
+                        'Search Sqlite': '🗄️ Database Search',
+                        'Perform Google Maps Search': '🗺️ Maps Search'
+                    }
+                    action_display = action_map.get(node['action'].replace('_', ' ').title(), node['action'].replace('_', ' ').title())
                     
-                    if removed_step_data:
-                        df = pd.DataFrame(removed_step_data)
-                        st.dataframe(df, use_container_width=True)
-                else:
-                    # Simple text-based table for removed steps
-                    for node in sorted(removed_nodes, key=lambda x: (x.get('branch_index', 0), x['step_number'])):
-                        with st.container():
-                            col1, col2 = st.columns([1, 4])
-                            with col1:
-                                branch_info = f" (Branch {node.get('branch_index', '?')})" if node.get('branch_index') else ""
-                                st.markdown(f"**Step {node['step_number']}.{node['version']}{branch_info}**")
-                            with col2:
-                                action_clean = node['action'].replace('_', ' ').title()
-                                result_status = "✅ Yes" if node['has_result'] else "❌ No"
-                                st.markdown(f"**{action_clean}** | Result: {result_status}")
-                                st.caption(f"Removed: {node.get('removed_reason', 'Unknown')}")
-                                st.caption(f"Input: {node['user_input'][:50]}...")
-                            st.markdown("---")
+                    active_step_data.append({
+                        "Step": f"{node['step_number']}.{node['version']}",
+                        "Action": action_display,
+                        "Status": "✅ Completed" if node['has_result'] else "⏳ In Progress",
+                        "Time": node['timestamp'][:19],
+                        "User Input": node['user_input'][:60] + "..." if len(node['user_input']) > 60 else node['user_input']
+                    })
+                
+                df = pd.DataFrame(active_step_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+            else:
+                # Fallback to card-based view
+                for node in sorted(active_nodes, key=lambda x: x['step_number']):
+                    with st.container():
+                        col1, col2 = st.columns([1, 4])
+                        with col1:
+                            st.markdown(f"**Step {node['step_number']}.{node['version']}**")
+                        with col2:
+                            action_clean = node['action'].replace('_', ' ').title()
+                            result_status = "✅ Yes" if node['has_result'] else "❌ No"
+                            st.markdown(f"**{action_clean}** | Result: {result_status}")
+                            st.caption(f"⏰ {node['timestamp'][:19]}")
+                            st.caption(f"💬 {node['user_input'][:50]}...")
+                        st.markdown("---")
+        else:
+            st.info("No active steps to display")
+    
+    if tab2 and removed_nodes:
+        with tab2:
+            if PLOTLY_AVAILABLE:
+                removed_step_data = []
+                for node in sorted(removed_nodes, key=lambda x: (x.get('branch_index', 0), x['step_number'])):
+                    removed_step_data.append({
+                        "Step": f"{node['step_number']}.{node['version']}",
+                        "Action": node['action'].replace('_', ' ').title(),
+                        "Branch": f"Branch {node.get('branch_index', '?')}" if node.get('branch_index') else "Unknown",
+                        "Result": "✅ Yes" if node['has_result'] else "❌ No",
+                        "Removed Reason": node.get('removed_reason', 'Unknown'),
+                        "Time": node['timestamp'][:19],
+                        "Input Preview": node['user_input'][:50] + "..." if len(node['user_input']) > 50 else node['user_input']
+                    })
+                
+                df = pd.DataFrame(removed_step_data)
+                st.dataframe(df, use_container_width=True, hide_index=True)
+            else:
+                # Fallback to card-based view for removed steps
+                for node in sorted(removed_nodes, key=lambda x: (x.get('branch_index', 0), x['step_number'])):
+                    with st.container():
+                        col1, col2 = st.columns([1, 4])
+                        with col1:
+                            branch_info = f" (Branch {node.get('branch_index', '?')})" if node.get('branch_index') else ""
+                            st.markdown(f"**Step {node['step_number']}.{node['version']}{branch_info}**")
+                        with col2:
+                            action_clean = node['action'].replace('_', ' ').title()
+                            result_status = "✅ Yes" if node['has_result'] else "❌ No"
+                            st.markdown(f"**{action_clean}** | Result: {result_status}")
+                            st.caption(f"🗑️ {node.get('removed_reason', 'Unknown')}")
+                            st.caption(f"💬 {node['user_input'][:50]}...")
+                        st.markdown("---")
 
 
 def create_timeline_chart(session_id: str):

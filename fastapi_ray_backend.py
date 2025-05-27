@@ -296,6 +296,54 @@ async def get_session_history(session_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get session history: {str(e)}")
 
+@app.get("/session/{session_id}/history/{up_to_step}")
+async def get_session_history_up_to_step(session_id: str, up_to_step: int):
+    """Get the chat history up to and including a specific step"""
+    try:
+        state_manager = get_state_manager()
+        state = state_manager.load_state(session_id)
+        if not state:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Find the target step
+        target_step = None
+        for snapshot in state.state_history:
+            if snapshot.step == up_to_step and snapshot.is_active:
+                target_step = snapshot
+                break
+        
+        if not target_step:
+            raise HTTPException(status_code=404, detail=f"Step {up_to_step} not found or not active")
+        
+        # Calculate the ending index in chat history
+        # Count how many steps up to and including this one (only active steps)
+        steps_up_to = 0
+        for snapshot in state.state_history:
+            if snapshot.step <= up_to_step and snapshot.is_active:
+                steps_up_to += 1
+        
+        # Each step typically adds 2 messages (user input + assistant response)
+        end_index = steps_up_to * 2
+        
+        # Get the filtered chat history (from beginning up to the target step)
+        filtered_chat_history = state.chat_history[:end_index] if end_index <= len(state.chat_history) else state.chat_history
+        
+        return {
+            "session_id": session_id,
+            "up_to_step": up_to_step,
+            "chat_history": [
+                {
+                    "role": msg.get("role", "assistant"),
+                    "content": msg.get("content", "")
+                } for msg in filtered_chat_history
+            ]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get session history up to step: {str(e)}")
+
 @app.get("/ray/status")
 async def get_ray_status():
     """Get Ray cluster status for monitoring"""

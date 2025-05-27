@@ -255,7 +255,9 @@ class ConversationState:
                 {
                     "step": s.step,
                     "action": s.action,
+                    "destination": s.destination,
                     "timestamp": s.timestamp,
+                    "user_input": s.user_input,
                     "has_result": s.has_result,
                     "version": s.version
                 } for s in active_steps
@@ -264,7 +266,9 @@ class ConversationState:
                 {
                     "step": s.step,
                     "action": s.action,
+                    "destination": s.destination,
                     "timestamp": s.timestamp,
+                    "user_input": s.user_input,
                     "has_result": s.has_result,
                     "removed_at": s.removed_at,
                     "removed_reason": s.removed_reason,
