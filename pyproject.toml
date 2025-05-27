@@ -15,4 +15,12 @@ dependencies = [
     "rich>=14.0.0",
     "streamlit>=1.45.1",
     "python-dotenv",
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+    "ray>=2.8.0",
+    "pymongo>=4.6.0",
+    "requests>=2.31.0",
+    # Optional visualization dependencies
+    "plotly>=5.17.0",
+    "pandas>=2.1.0",
 ]

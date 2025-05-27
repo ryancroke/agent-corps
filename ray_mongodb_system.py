@@ -265,6 +265,7 @@ class ConversationState:
                     "step": s.step,
                     "action": s.action,
                     "timestamp": s.timestamp,
+                    "has_result": s.has_result,
                     "removed_at": s.removed_at,
                     "removed_reason": s.removed_reason,
                     "version": s.version

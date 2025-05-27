@@ -501,6 +501,251 @@ async def get_step_details(session_id: str, step_number: int, include_removed: b
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get step details: {str(e)}")
 
+@app.get("/session/{session_id}/graph")
+async def get_session_graph(session_id: str):
+    """Get conversation timeline as graph data for visualization"""
+    try:
+        state_manager = get_state_manager()
+        state = state_manager.load_state(session_id)
+        if not state:
+            raise HTTPException(status_code=404, detail="Session not found")
+        
+        # Build graph data structure with improved layout
+        nodes = []
+        edges = []
+        
+        # Add start node
+        nodes.append({
+            "id": "start",
+            "label": "Start",
+            "type": "start",
+            "color": "#4CAF50",
+            "size": 25,
+            "x": 0,
+            "y": 0
+        })
+        
+        # Process all steps and organize by timeline
+        all_steps = sorted(state.state_history, key=lambda x: (x.step, x.version))
+        
+        # Improved layout calculation
+        step_spacing_x = 200
+        version_spacing_y = 120
+        branch_offset_y = 60
+        
+        # Separate active and removed steps for better layout
+        active_steps = [s for s in all_steps if s.is_active]
+        removed_steps = [s for s in all_steps if not s.is_active]
+        
+        # Create main timeline (active steps)
+        main_timeline_y = 0
+        
+        # Position active steps along main timeline
+        for i, step in enumerate(sorted(active_steps, key=lambda x: x.step)):
+            x = (step.step) * step_spacing_x
+            y = main_timeline_y
+            
+            # Determine node properties
+            color = "#2196F3" if step.has_result else "#FF9800"
+            border_color = "#1976D2" if step.has_result else "#F57C00"
+            
+            # Create cleaner action label
+            action_parts = step.action.replace("_", " ").split()
+            action_label = " ".join(word.capitalize() for word in action_parts)
+            
+            # Shorter, cleaner node label
+            node_label = f"Step {step.step}\n{action_label}"
+            
+            nodes.append({
+                "id": f"step_{step.step}_{step.version}",
+                "label": node_label,
+                "type": "step",
+                "step_number": step.step,
+                "version": step.version,
+                "action": step.action,
+                "destination": step.destination,
+                "has_result": step.has_result,
+                "is_active": step.is_active,
+                "timestamp": step.timestamp,
+                "user_input": step.user_input[:100] + "..." if len(step.user_input) > 100 else step.user_input,
+                "removed_at": None,
+                "removed_reason": None,
+                "color": color,
+                "border_color": border_color,
+                "opacity": 1.0,
+                "size": 30,
+                "x": x,
+                "y": y
+            })
+        
+        # Position removed steps in branches below main timeline
+        removed_by_branch = {}
+        for step in removed_steps:
+            # Group removed steps by the step they were removed from
+            if step.removed_reason and "Resumed from step" in step.removed_reason:
+                try:
+                    resume_step_num = int(step.removed_reason.split("step ")[-1])
+                    if resume_step_num not in removed_by_branch:
+                        removed_by_branch[resume_step_num] = []
+                    removed_by_branch[resume_step_num].append(step)
+                except:
+                    # Fallback for parsing errors
+                    if "other" not in removed_by_branch:
+                        removed_by_branch["other"] = []
+                    removed_by_branch["other"].append(step)
+        
+        # Position removed steps in organized branches
+        branch_index = 1
+        for resume_step, branch_steps in removed_by_branch.items():
+            branch_y = -branch_index * (version_spacing_y + branch_offset_y)
+            
+            for i, step in enumerate(sorted(branch_steps, key=lambda x: x.step)):
+                x = step.step * step_spacing_x
+                y = branch_y
+                
+                # Removed step styling
+                color = "#9E9E9E"
+                border_color = "#757575"
+                
+                # Create action label
+                action_parts = step.action.replace("_", " ").split()
+                action_label = " ".join(word.capitalize() for word in action_parts)
+                
+                node_label = f"Step {step.step}.{step.version}\n{action_label}\n(Removed)"
+                
+                nodes.append({
+                    "id": f"step_{step.step}_{step.version}",
+                    "label": node_label,
+                    "type": "step",
+                    "step_number": step.step,
+                    "version": step.version,
+                    "action": step.action,
+                    "destination": step.destination,
+                    "has_result": step.has_result,
+                    "is_active": step.is_active,
+                    "timestamp": step.timestamp,
+                    "user_input": step.user_input[:100] + "..." if len(step.user_input) > 100 else step.user_input,
+                    "removed_at": step.removed_at,
+                    "removed_reason": step.removed_reason,
+                    "color": color,
+                    "border_color": border_color,
+                    "opacity": 0.7,
+                    "size": 25,
+                    "x": x,
+                    "y": y,
+                    "branch_index": branch_index,
+                    "resume_step": resume_step
+                })
+            
+            branch_index += 1
+        
+        # Create cleaner edge connections
+        
+        # 1. Connect start to first active step
+        if active_steps:
+            first_step = min(active_steps, key=lambda x: x.step)
+            edges.append({
+                "id": f"start_to_step_{first_step.step}",
+                "source": "start",
+                "target": f"step_{first_step.step}_{first_step.version}",
+                "type": "main_flow",
+                "color": "#4CAF50",
+                "width": 3,
+                "opacity": 1.0,
+                "style": "solid"
+            })
+        
+        # 2. Connect sequential active steps (main timeline)
+        sorted_active = sorted(active_steps, key=lambda x: x.step)
+        for i in range(len(sorted_active) - 1):
+            current_step = sorted_active[i]
+            next_step = sorted_active[i + 1]
+            
+            edges.append({
+                "id": f"main_flow_{current_step.step}_to_{next_step.step}",
+                "source": f"step_{current_step.step}_{current_step.version}",
+                "target": f"step_{next_step.step}_{next_step.version}",
+                "type": "main_flow",
+                "color": "#2196F3",
+                "width": 3,
+                "opacity": 1.0,
+                "style": "solid"
+            })
+        
+        # 3. Connect removed step branches
+        for resume_step, branch_steps in removed_by_branch.items():
+            if isinstance(resume_step, int):
+                # Find the resume point in active steps
+                resume_node = next((s for s in active_steps if s.step == resume_step), None)
+                if resume_node:
+                    # Connect resume point to branch
+                    sorted_branch = sorted(branch_steps, key=lambda x: x.step)
+                    if sorted_branch:
+                        # Connect to first step in branch
+                        first_branch_step = sorted_branch[0]
+                        edges.append({
+                            "id": f"branch_from_{resume_step}_to_{first_branch_step.step}",
+                            "source": f"step_{resume_node.step}_{resume_node.version}",
+                            "target": f"step_{first_branch_step.step}_{first_branch_step.version}",
+                            "type": "branch_point",
+                            "color": "#FF5722",
+                            "width": 2,
+                            "opacity": 0.8,
+                            "style": "dashed"
+                        })
+                        
+                        # Connect sequential steps within branch
+                        for i in range(len(sorted_branch) - 1):
+                            current_step = sorted_branch[i]
+                            next_step = sorted_branch[i + 1]
+                            
+                            if next_step.step == current_step.step + 1:  # Only connect sequential steps
+                                edges.append({
+                                    "id": f"branch_flow_{current_step.step}_to_{next_step.step}",
+                                    "source": f"step_{current_step.step}_{current_step.version}",
+                                    "target": f"step_{next_step.step}_{next_step.version}",
+                                    "type": "branch_flow",
+                                    "color": "#9E9E9E",
+                                    "width": 2,
+                                    "opacity": 0.6,
+                                    "style": "solid"
+                                })
+        
+        # Calculate improved graph statistics
+        graph_stats = {
+            "total_nodes": len(nodes),
+            "total_edges": len(edges),
+            "total_steps": len(all_steps),
+            "active_steps": len(active_steps),
+            "removed_steps": len(removed_steps),
+            "current_version": state.current_version,
+            "current_step": state.current_step,
+            "versions": len(set(s.version for s in all_steps)),
+            "branches": len(removed_by_branch)
+        }
+        
+        return {
+            "session_id": session_id,
+            "graph": {
+                "nodes": nodes,
+                "edges": edges
+            },
+            "stats": graph_stats,
+            "layout": {
+                "type": "improved_hierarchical",
+                "direction": "LR",  # Left to Right
+                "step_spacing_x": step_spacing_x,
+                "version_spacing_y": version_spacing_y,
+                "branch_offset_y": branch_offset_y,
+                "main_timeline_y": main_timeline_y
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate graph data: {str(e)}")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000) 
