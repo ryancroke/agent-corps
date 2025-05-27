@@ -45,6 +45,7 @@ def initialize_session():
                 session_data = response.json()
                 st.session_state.session_id = session_data["session_id"]
                 st.session_state.session_data = session_data
+                st.session_state.chat_initialized = True
             else:
                 st.error("Failed to create session with backend")
                 st.session_state.session_id = str(uuid.uuid4())
@@ -55,6 +56,7 @@ def initialize_session():
                     "last_action": None,
                     "destination": None
                 }
+                st.session_state.chat_initialized = True
         except requests.exceptions.ConnectionError:
             st.error("Cannot connect to FastAPI backend. Please ensure it's running on port 8000.")
             st.session_state.session_id = str(uuid.uuid4())
@@ -65,6 +67,7 @@ def initialize_session():
                 "last_action": None,
                 "destination": None
             }
+            st.session_state.chat_initialized = True
     
     return st.session_state.session_data
 
@@ -397,6 +400,7 @@ def show_server_status(session_data):
             check_backend_status.clear()
             check_mongodb_status.clear()
             check_ray_status.clear()
+            get_worker_status.clear() if hasattr(get_worker_status, 'clear') else None
     
     # Backend status
     if check_backend_status():
@@ -423,6 +427,34 @@ def show_server_status(session_data):
         with col2:
             st.sidebar.caption(f"👷 Workers: {ray_info['num_workers']}")
             st.sidebar.caption(f"🔄 Tasks: {len(ray_info['tasks'])}")
+        
+        # Show worker pool status
+        worker_status = get_worker_status()
+        if worker_status.get("status") == "available":
+            st.sidebar.success("✅ Worker Pools Active")
+            
+            # Show worker pool summary
+            worker_data = worker_status.get("worker_pools", {})
+            worker_pools_data = worker_data.get("worker_pools", {})
+            if worker_pools_data:
+                st.sidebar.markdown("**⚡ Worker Pool Status:**")
+                for pool_type, pool_info in worker_pools_data.items():
+                    if isinstance(pool_info, dict):
+                        available = pool_info.get("available", 0)
+                        total = pool_info.get("count", 0)
+                        utilization = (pool_info.get("busy", 0) / max(total, 1)) * 100
+                        
+                        # Color code based on utilization
+                        if utilization < 30:
+                            status_color = "🟢"
+                        elif utilization < 70:
+                            status_color = "🟡"
+                        else:
+                            status_color = "🔴"
+                        
+                        st.sidebar.caption(f"{status_color} {pool_type.title()}: {available}/{total} available ({utilization:.0f}% busy)")
+        else:
+            st.sidebar.error("❌ Worker Pools Unavailable")
         
         # Show worker details
         workers = ray_info.get('workers', [])
@@ -509,21 +541,44 @@ def show_server_status(session_data):
 
 
 async def process_user_input(user_input: str):
-    """Process user input through the FastAPI backend"""
+    """Process user input through the FastAPI backend with real-time worker monitoring"""
     try:
         # Create placeholders for real-time monitoring
         task_status_placeholder = st.empty()
         worker_status_placeholder = st.empty()
+        worker_details_placeholder = st.empty()
+        progress_placeholder = st.empty()
         
         # Show initial processing status
         with task_status_placeholder.container():
-            st.info("🚀 Starting Ray tasks...")
+            st.info("🚀 Starting Ray worker pool processing...")
         
-        # Show worker assignment
-        ray_info = get_ray_cluster_info()
-        if ray_info.get('status') and ray_info.get('workers'):
+        # Show initial worker status
+        worker_status = get_worker_status()
+        if worker_status.get("status") == "available":
             with worker_status_placeholder.container():
-                st.info(f"👷 Assigning to {len(ray_info['workers'])} available worker(s)")
+                worker_data = worker_status.get("worker_pools", {})
+                worker_pools = worker_data.get("worker_pools", {})
+                total_workers = worker_data.get("total_workers", 0)
+                available_workers = sum(pool.get("available", 0) for pool in worker_pools.values() if isinstance(pool, dict))
+                st.info(f"👷 Worker Pool Status: {available_workers}/{total_workers} workers available")
+                
+                # Show worker pool breakdown
+                pool_status = []
+                for pool_type, pool_info in worker_pools.items():
+                    if isinstance(pool_info, dict):
+                        available = pool_info.get("available", 0)
+                        total = pool_info.get("count", 0)
+                        pool_status.append(f"{pool_type.title()}: {available}/{total}")
+                
+                if pool_status:
+                    st.caption("Worker pools: " + " | ".join(pool_status))
+        
+        # Show progress bar
+        with progress_placeholder.container():
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            status_text.text("Initializing task...")
         
         # Send request to FastAPI backend
         payload = {
@@ -531,21 +586,59 @@ async def process_user_input(user_input: str):
             "user_input": user_input
         }
         
+        # Update progress
+        progress_bar.progress(25)
+        status_text.text("Routing request to appropriate worker...")
+        
+        # Start the request
         response = requests.post(f"{BACKEND_URL}/process", json=payload)
         
+        # Monitor task execution in real-time
         if response.status_code == 200:
+            progress_bar.progress(50)
+            status_text.text("Task assigned to worker, processing...")
+            
+            # Get task logs to show which worker handled the request
+            time.sleep(0.5)  # Give time for task to start
+            session_logs = get_task_logs(st.session_state.session_id)
+            
+            if session_logs:
+                latest_log = session_logs[-1]
+                worker_id = latest_log.get("worker_id", "unknown")
+                task_name = latest_log.get("task_name", "unknown")
+                worker_type = latest_log.get("worker_type", "unknown")
+                
+                with worker_details_placeholder.container():
+                    st.success(f"✅ Task '{task_name}' executed by {worker_type.title()} worker: `{worker_id}`")
+            
+            progress_bar.progress(75)
+            status_text.text("Processing complete, generating response...")
+            
             # Update session data with response
             st.session_state.session_data = response.json()
             
-            # Show completion status
-            with task_status_placeholder.container():
-                st.success("✅ Ray tasks completed successfully!")
+            progress_bar.progress(100)
+            status_text.text("✅ All tasks completed successfully!")
             
-            # Clear status after a moment
-            time.sleep(1)
+            # Show final worker status
+            final_worker_status = get_worker_status()
+            if final_worker_status.get("status") == "available":
+                with task_status_placeholder.container():
+                    worker_data = final_worker_status.get("worker_pools", {})
+                    worker_pools = worker_data.get("worker_pools", {})
+                    total_workers = worker_data.get("total_workers", 0)
+                    available_workers = sum(pool.get("available", 0) for pool in worker_pools.values() if isinstance(pool, dict))
+                    st.success(f"🎯 Processing complete! Workers ready: {available_workers}/{total_workers}")
+            
+            # Clear status after showing results
+            time.sleep(2)
             task_status_placeholder.empty()
             worker_status_placeholder.empty()
+            progress_placeholder.empty()
+            
         else:
+            progress_bar.progress(0)
+            status_text.text("❌ Processing failed")
             task_status_placeholder.empty()
             worker_status_placeholder.empty()
             st.error(f"Backend error: {response.status_code}")
@@ -564,7 +657,7 @@ async def main():
     show_server_status(session_data)
     
     # Create tabs for different views
-    tab1, tab2 = st.tabs(["💬 Chat", "📊 Conversation Graph"])
+    tab1, tab2, tab3 = st.tabs(["💬 Chat", "📊 Conversation Graph", "⚡ Worker Pool Monitor"])
     
     with tab1:
         # Check if user selected a specific step to view history from
@@ -702,12 +795,16 @@ async def main():
         if selected_step:
             st.info(f"📖 Showing conversation up to Step {selected_step}")
         
-        for chat_message in filtered_history:
-            render_chat_message(chat_message)
+        # Create a container for chat messages to prevent duplication
+        chat_container = st.container()
+        with chat_container:
+            for chat_message in filtered_history:
+                render_chat_message(chat_message)
 
         # Get user input (only show if viewing full conversation)
         if not selected_step:
-            prompt = st.chat_input("Ask me a question!", key="chat_input")
+            # Use a unique key to prevent multiple chat inputs
+            prompt = st.chat_input("Ask me a question!", key="main_chat_input")
 
             if prompt:
                 # Process through FastAPI backend
@@ -729,7 +826,7 @@ async def main():
                         st.info("💬 **Ready to continue!** You can now ask a new question to continue the conversation from this point.")
                         
                         # Allow user input from this point
-                        prompt = st.chat_input("Continue the conversation from here...", key="chat_input_resume")
+                        prompt = st.chat_input("Continue the conversation from here...", key="resume_chat_input")
                         if prompt:
                             # Clear the selected step to return to normal flow
                             st.session_state.selected_step_for_history = None
@@ -764,6 +861,51 @@ async def main():
                 create_timeline_chart(st.session_state.session_id)
         else:
             st.info("Start a conversation to see the visualizations.")
+    
+    with tab3:
+        st.markdown("### ⚡ Ray Worker Pool Monitor")
+        st.markdown("Real-time monitoring of the Ray worker pool system showing task distribution, worker status, and performance metrics.")
+        
+        # Sub-tabs for worker pool monitoring
+        worker_tab1, worker_tab2, worker_tab3, worker_tab4, worker_tab5 = st.tabs([
+            "📊 Overview", "👷 Worker Details", "📝 Task Logs", "🚀 Live Demo", "🔄 Live Monitor"
+        ])
+        
+        with worker_tab1:
+            render_worker_pool_overview()
+        
+        with worker_tab2:
+            worker_status = get_worker_status()
+            if worker_status.get("status") != "error":
+                render_worker_pools_detail(worker_status)
+            else:
+                st.error(f"❌ Worker pool not available: {worker_status.get('error')}")
+        
+        with worker_tab3:
+            render_task_logs()
+        
+        with worker_tab4:
+            render_live_demo()
+        
+        with worker_tab5:
+            # Auto-refresh toggle for live monitoring
+            col1, col2 = st.columns([3, 1])
+            with col1:
+                st.markdown("Real-time worker pool monitoring with live updates")
+            with col2:
+                auto_refresh = st.checkbox("Auto-refresh (3s)", value=False, key="worker_auto_refresh")
+            
+            render_live_worker_monitor()
+            
+            # Auto-refresh functionality (only if this tab is active)
+            if auto_refresh:
+                # Use a placeholder to avoid full page rerun
+                placeholder = st.empty()
+                with placeholder.container():
+                    st.info("🔄 Auto-refreshing in 3 seconds...")
+                time.sleep(3)
+                placeholder.empty()
+                st.rerun()
 
 
 def create_conversation_graph(session_id: str):
@@ -2046,6 +2188,431 @@ def create_simple_timeline_visualization(active_steps, removed_steps):
         st.markdown("#### Removed Steps:")
         for step in removed_steps:
             st.write(f"🔴 Step {step['step']}.{step.get('version', 1)}: {step['action'].replace('_', ' ').title()}")
+
+
+# Worker Pool Monitoring Functions
+@st.cache_data(ttl=2)  # Cache for 2 seconds for real-time feel
+def get_worker_status():
+    """Get worker pool status from backend"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/workers/status", timeout=5)
+        if response.status_code == 200:
+            return response.json()
+        return {"status": "error", "error": "Backend not responding"}
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+def get_task_logs(session_id=None):
+    """Get task execution logs"""
+    try:
+        if session_id:
+            response = requests.get(f"{BACKEND_URL}/ray/task-logs/{session_id}", timeout=5)
+        else:
+            response = requests.get(f"{BACKEND_URL}/ray/task-logs", timeout=5)
+        
+        if response.status_code == 200:
+            return response.json().get("logs", [])
+        return []
+    except Exception as e:
+        return []
+
+def render_worker_pool_overview():
+    """Render the main worker pool overview"""
+    st.subheader("⚡ Ray Worker Pool Status")
+    
+    # Get worker status
+    worker_status = get_worker_status()
+    ray_status = get_ray_status()
+    
+    if worker_status.get("status") == "error":
+        st.error(f"❌ Worker pool not available: {worker_status.get('error')}")
+        return worker_status, ray_status
+    
+    if not ray_status.get("ray_healthy"):
+        st.error(f"❌ Ray cluster not healthy: {ray_status.get('error', 'Unknown error')}")
+        return worker_status, ray_status
+    
+    # Main metrics
+    worker_data = worker_status.get("worker_pools", {})
+    worker_pools_data = worker_data.get("worker_pools", {})
+    total_workers = worker_data.get("total_workers", 0)
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Total Workers", 
+            total_workers,
+            help="Total number of workers across all pools"
+        )
+    
+    with col2:
+        available_workers = sum(pool.get("available", 0) for pool in worker_pools_data.values() if isinstance(pool, dict))
+        st.metric(
+            "Available Workers", 
+            available_workers,
+            help="Workers currently available for new tasks"
+        )
+    
+    with col3:
+        busy_workers = sum(pool.get("busy", 0) for pool in worker_pools_data.values() if isinstance(pool, dict))
+        st.metric(
+            "Busy Workers", 
+            busy_workers,
+            help="Workers currently executing tasks"
+        )
+    
+    with col4:
+        utilization = (busy_workers / total_workers * 100) if total_workers > 0 else 0
+        st.metric(
+            "Utilization", 
+            f"{utilization:.1f}%",
+            help="Percentage of workers currently busy"
+        )
+    
+    # Task distribution charts
+    if PLOTLY_AVAILABLE and worker_pools_data:
+        st.subheader("📊 Worker Pool Distribution")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Pie chart for worker distribution
+            labels = []
+            values = []
+            colors = ['#6c757d', '#007bff', '#28a745', '#ffc107']
+            
+            for i, (pool_type, pool_info) in enumerate(worker_pools_data.items()):
+                if isinstance(pool_info, dict):
+                    labels.append(f"{pool_type.title()}")
+                    values.append(pool_info.get("count", 0))
+            
+            if labels and values:
+                fig_pie = go.Figure(data=[go.Pie(
+                    labels=labels, 
+                    values=values,
+                    marker_colors=colors[:len(labels)],
+                    hole=0.3
+                )])
+                fig_pie.update_layout(
+                    title="Worker Pool Distribution",
+                    height=400
+                )
+                st.plotly_chart(fig_pie, use_container_width=True)
+        
+        with col2:
+            # Utilization bar chart
+            utilization_data = []
+            for pool_type, pool_info in worker_pools_data.items():
+                if isinstance(pool_info, dict):
+                    total = pool_info.get("count", 0)
+                    busy = pool_info.get("busy", 0)
+                    utilization = (busy / max(total, 1)) * 100
+                    utilization_data.append({
+                        "Pool": pool_type.title(),
+                        "Utilization": utilization,
+                        "Busy": busy,
+                        "Total": total
+                    })
+            
+            if utilization_data:
+                df_util = pd.DataFrame(utilization_data)
+                fig_bar = px.bar(
+                    df_util, 
+                    x="Pool", 
+                    y="Utilization",
+                    title="Worker Pool Utilization (%)",
+                    color="Utilization",
+                    color_continuous_scale="RdYlGn_r"
+                )
+                fig_bar.update_layout(height=400)
+                st.plotly_chart(fig_bar, use_container_width=True)
+    
+    return worker_status, ray_status
+
+def render_worker_pools_detail(worker_status):
+    """Render detailed worker pool information"""
+    st.subheader("👷 Worker Pool Details")
+    
+    worker_data = worker_status.get("worker_pools", {})
+    worker_pools = worker_data.get("worker_pools", {})
+    workers = worker_data.get("workers", [])
+    
+    # Worker pool summary
+    pool_data = []
+    for pool_type, pool_info in worker_pools.items():
+        if isinstance(pool_info, dict):
+            pool_data.append({
+                "Pool Type": pool_type.title(),
+                "Total": pool_info.get("count", 0),
+                "Available": pool_info.get("available", 0),
+                "Busy": pool_info.get("busy", 0),
+                "Utilization": f"{(pool_info.get('busy', 0) / max(pool_info.get('count', 1), 1) * 100):.1f}%"
+            })
+    
+    if pool_data:
+        df = pd.DataFrame(pool_data)
+        st.dataframe(df, use_container_width=True)
+    
+    # Individual worker details
+    st.subheader("🔧 Individual Workers")
+    
+    # Group workers by type
+    workers_by_type = {}
+    for worker in workers:
+        worker_type = worker.get("worker_type", "unknown")
+        if worker_type not in workers_by_type:
+            workers_by_type[worker_type] = []
+        workers_by_type[worker_type].append(worker)
+    
+    # Display workers by type
+    for worker_type, type_workers in workers_by_type.items():
+        with st.expander(f"{worker_type.title()} Workers ({len(type_workers)})", expanded=True):
+            cols = st.columns(min(len(type_workers), 3))
+            
+            for i, worker in enumerate(type_workers):
+                col_idx = i % 3
+                with cols[col_idx]:
+                    status = "🟢 Available" if worker.get("available") else "🔴 Busy"
+                    
+                    st.markdown(f"""
+                    **{worker.get('worker_id', 'Unknown')}**  
+                    {status}  
+                    Tasks: {worker.get('current_tasks', 0)}/{worker.get('max_concurrent_tasks', 0)}
+                    """)
+
+def render_task_logs():
+    """Render recent task execution logs"""
+    st.subheader("📝 Recent Task Executions")
+    
+    logs = get_task_logs()
+    
+    if not logs:
+        st.info("No recent task executions found.")
+        return
+    
+    # Convert logs to DataFrame
+    df_logs = pd.DataFrame(logs)
+    
+    if not df_logs.empty:
+        # Add time formatting
+        df_logs['timestamp'] = pd.to_datetime(df_logs['timestamp'])
+        df_logs['time'] = df_logs['timestamp'].dt.strftime('%H:%M:%S')
+        
+        # Display recent logs
+        st.dataframe(
+            df_logs[['time', 'task_name', 'worker_id', 'session_id']].tail(20),
+            use_container_width=True
+        )
+        
+        # Task frequency chart
+        if len(df_logs) > 1 and PLOTLY_AVAILABLE:
+            task_counts = df_logs['task_name'].value_counts()
+            
+            fig_tasks = px.bar(
+                x=task_counts.index,
+                y=task_counts.values,
+                title="Task Execution Frequency",
+                labels={'x': 'Task Type', 'y': 'Count'}
+            )
+            fig_tasks.update_layout(height=400)
+            st.plotly_chart(fig_tasks, use_container_width=True)
+
+def render_live_demo():
+    """Render live demo section"""
+    st.subheader("🚀 Live Worker Pool Demo")
+    
+    # Initialize session
+    if "worker_demo_session_id" not in st.session_state:
+        try:
+            response = requests.post(f"{BACKEND_URL}/session/create")
+            if response.status_code == 200:
+                session_data = response.json()
+                st.session_state.worker_demo_session_id = session_data["session_id"]
+            else:
+                st.error("Failed to create demo session")
+                return
+        except Exception as e:
+            st.error(f"Error creating session: {e}")
+            return
+    
+    session_id = st.session_state.worker_demo_session_id
+    
+    # Demo controls
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        user_input = st.text_input(
+            "Test the worker pool with a query:",
+            placeholder="Try: 'Search for Python tutorials' or 'What is machine learning?'",
+            key="worker_demo_input"
+        )
+    
+    with col2:
+        if st.button("Send", type="primary", key="worker_demo_send"):
+            if user_input:
+                with st.spinner("Processing through worker pool..."):
+                    try:
+                        response = requests.post(f"{BACKEND_URL}/process", json={
+                            "session_id": session_id,
+                            "user_input": user_input
+                        })
+                        if response.status_code == 200:
+                            result = response.json()
+                            st.success("✅ Processed successfully!")
+                            
+                            # Show the response
+                            if result.get("chat_history"):
+                                latest_response = result["chat_history"][-1]
+                                if latest_response.get("role") == "assistant":
+                                    st.markdown("**Response:**")
+                                    st.write(latest_response.get("content", "No response content"))
+                        else:
+                            st.error("❌ Processing failed")
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+    
+    # Show session-specific task logs
+    st.subheader("📋 Session Task History")
+    session_logs = get_task_logs(session_id)
+    
+    if session_logs:
+        df_session = pd.DataFrame(session_logs)
+        df_session['timestamp'] = pd.to_datetime(df_session['timestamp'])
+        df_session['time'] = df_session['timestamp'].dt.strftime('%H:%M:%S')
+        
+        st.dataframe(
+            df_session[['time', 'task_name', 'worker_id']],
+            use_container_width=True
+        )
+    else:
+        st.info("No tasks executed in this session yet.")
+
+def get_ray_status():
+    """Get Ray cluster status from backend"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/ray/status", timeout=5)
+        if response.status_code == 200:
+            return response.json()
+        return {"ray_healthy": False, "error": "Backend not responding"}
+    except Exception as e:
+        return {"ray_healthy": False, "error": str(e)}
+
+def render_live_worker_monitor():
+    """Render a live worker monitoring component"""
+    st.markdown("### 🔄 Live Worker Monitor")
+    
+    # Create containers for real-time updates
+    worker_overview_container = st.container()
+    active_tasks_container = st.container()
+    worker_details_container = st.container()
+    
+    # Get current worker status
+    worker_status = get_worker_status()
+    
+    if worker_status.get("status") != "available":
+        st.error(f"❌ Worker pool not available: {worker_status.get('error')}")
+        return
+    
+    with worker_overview_container:
+        st.markdown("#### 📊 Worker Pool Overview")
+        
+        worker_data = worker_status.get("worker_pools", {})
+        worker_pools = worker_data.get("worker_pools", {})
+        workers = worker_data.get("workers", [])
+        
+        # Create metrics columns
+        col1, col2, col3, col4 = st.columns(4)
+        
+        total_workers = worker_data.get("total_workers", 0)
+        available_workers = sum(pool.get("available", 0) for pool in worker_pools.values() if isinstance(pool, dict))
+        busy_workers = sum(pool.get("busy", 0) for pool in worker_pools.values() if isinstance(pool, dict))
+        utilization = (busy_workers / total_workers * 100) if total_workers > 0 else 0
+        
+        with col1:
+            st.metric("Total Workers", total_workers)
+        with col2:
+            st.metric("Available", available_workers, delta=None)
+        with col3:
+            st.metric("Busy", busy_workers, delta=None)
+        with col4:
+            st.metric("Utilization", f"{utilization:.1f}%")
+    
+    with active_tasks_container:
+        st.markdown("#### 🎯 Active Tasks")
+        
+        # Get recent task logs
+        recent_logs = get_task_logs()
+        
+        if recent_logs:
+            # Show last 5 tasks
+            recent_tasks = recent_logs[-5:]
+            
+            for log in reversed(recent_tasks):  # Show most recent first
+                task_time = log.get("timestamp", "")[-8:]  # Last 8 chars (HH:MM:SS)
+                task_name = log.get("task_name", "Unknown").replace("_", " ").title()
+                worker_id = log.get("worker_id", "Unknown")
+                worker_type = log.get("worker_type", "Unknown")
+                session_id = log.get("session_id", "")[:8]  # First 8 chars
+                
+                # Color code by worker type
+                type_colors = {
+                    "general": "🔵",
+                    "search": "🟢", 
+                    "ai": "🟡",
+                    "email": "🟠"
+                }
+                type_icon = type_colors.get(worker_type.lower(), "⚪")
+                
+                st.markdown(f"""
+                **{type_icon} {task_name}**  
+                `{worker_id}` | Session: `{session_id}` | {task_time}
+                """)
+        else:
+            st.info("No recent task executions")
+    
+    with worker_details_container:
+        st.markdown("#### 👷 Worker Details")
+        
+        # Group workers by type
+        workers_by_type = {}
+        for worker in workers:
+            worker_type = worker.get("worker_type", "unknown")
+            if worker_type not in workers_by_type:
+                workers_by_type[worker_type] = []
+            workers_by_type[worker_type].append(worker)
+        
+        # Display each worker type
+        for worker_type, type_workers in workers_by_type.items():
+            st.markdown(f"**{worker_type.title()} Workers ({len(type_workers)})**")
+            
+            # Create columns for workers
+            cols = st.columns(min(len(type_workers), 4))
+            
+            for i, worker in enumerate(type_workers):
+                col_idx = i % 4
+                with cols[col_idx]:
+                    worker_id = worker.get("worker_id", "Unknown")
+                    current_tasks = worker.get("current_tasks", 0)
+                    max_tasks = worker.get("max_concurrent_tasks", 0)
+                    is_available = worker.get("available", False)
+                    
+                    # Status indicator
+                    status_color = "🟢" if is_available else "🔴"
+                    status_text = "Available" if is_available else "Busy"
+                    
+                    # Progress bar for task load
+                    load_percentage = (current_tasks / max_tasks) if max_tasks > 0 else 0
+                    
+                    st.markdown(f"""
+                    **{worker_id}**  
+                    {status_color} {status_text}  
+                    Load: {current_tasks}/{max_tasks}
+                    """)
+                    
+                    # Show load bar
+                    if max_tasks > 0:
+                        st.progress(load_percentage)
 
 
 if __name__ == "__main__":

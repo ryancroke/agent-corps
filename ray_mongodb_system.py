@@ -834,8 +834,9 @@ def prompt_for_more_task(session_id: str) -> str:
     # Update state and create snapshot
     state.chat_history = updated_history
     state.current_mode = "general"
+    state.final_response = response  # Set final response directly
     state.last_action = ActionType.PROMPT_FOR_MORE.value
-    state.next_action = ActionType.GET_USER_INPUT.value
+    state.next_action = ActionType.PRESENT_RESPONSE.value  # Skip generate_final_response since we already have the response
     
     # Add state snapshot
     state.add_state_snapshot(

@@ -13,6 +13,7 @@ import uuid
 import ray
 import ray_mongodb_system as ray_system
 from ray_cluster_manager import get_ray_manager, ensure_ray_initialized
+from workflow_orchestrator import WorkflowOrchestrator
 import logging
 from collections import deque
 import threading
@@ -21,28 +22,31 @@ from datetime import datetime
 # Initialize FastAPI app
 app = FastAPI(title="MCP Ray Backend", version="1.0.1")
 
-# Global task execution log
-task_execution_log = deque(maxlen=50)  # Keep last 50 task executions
-log_lock = threading.Lock()
+# Global workflow orchestrator instance
+workflow_orchestrator = None
 
-def log_task_execution(session_id: str, task_name: str, worker_id: str = "unknown"):
-    """Log task execution with worker information"""
-    with log_lock:
-        task_execution_log.append({
-            "timestamp": datetime.utcnow().isoformat(),
-            "session_id": session_id,
-            "task_name": task_name,
-            "worker_id": worker_id
-        })
+# Import task logging functions
+from task_logger import get_task_logs as get_logs_from_logger, get_log_stats
 
 @app.on_event("startup")
 async def startup_event():
-    """Ensure Ray is initialized on startup"""
+    """Ensure Ray is initialized on startup and create workflow orchestrator"""
+    global workflow_orchestrator
+    
     ray_manager = get_ray_manager()
     success = ray_manager.init_ray()
     print(f"Ray initialized: {success}")
     if success:
         print(f"Ray dashboard available at: http://127.0.0.1:8265")
+        
+        # Initialize the workflow orchestrator with worker pools
+        workflow_orchestrator = WorkflowOrchestrator(
+            num_general_workers=2,
+            num_search_workers=3,  # More search workers since they're commonly used
+            num_ai_workers=2,      # AI workers for routing and general responses
+            num_email_workers=1    # One dedicated email worker
+        )
+        print("Workflow orchestrator initialized with worker pools")
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -89,8 +93,12 @@ async def root():
 async def create_session() -> SessionResponse:
     """Create a new conversation session"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.create_new_session()
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        session_id = workflow_orchestrator.create_new_session()
+        state = workflow_orchestrator.get_session_state(session_id)
+        
         return SessionResponse(
             session_id=state.session_id,
             current_mode=state.current_mode,
@@ -106,8 +114,10 @@ async def create_session() -> SessionResponse:
 async def get_session(session_id: str) -> SessionResponse:
     """Get session state"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -126,22 +136,21 @@ async def get_session(session_id: str) -> SessionResponse:
 
 @app.post("/process")
 async def process_message(request: ProcessRequest) -> SessionResponse:
-    """Process user input through the Ray system"""
+    """Process user input through the Ray worker pool system"""
     try:
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
         session_id = request.session_id
         user_input = request.user_input
         
         # Verify session exists
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
-        # Process through Ray system
-        await _process_through_ray(session_id, user_input)
-        
-        # Get updated state
-        updated_state = get_state_manager().load_state(session_id)
+        # Process through workflow orchestrator using worker pools
+        updated_state = await workflow_orchestrator.continue_workflow(session_id, user_input)
         
         return SessionResponse(
             session_id=updated_state.session_id,
@@ -157,79 +166,16 @@ async def process_message(request: ProcessRequest) -> SessionResponse:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to process message: {str(e)}")
 
-async def _process_through_ray(session_id: str, user_input: str):
-    """Internal function to process through Ray system"""
-    try:
-        # Ensure Ray is initialized and healthy
-        if not ensure_ray_initialized():
-            raise Exception("Ray is not initialized and failed to initialize")
-        # Start with user input
-        task_result = ray.get(ray_system.get_user_input_task.remote(session_id, user_input))
-        worker_id = task_result.get("worker_info", {}).get("worker_id", "unknown")
-        log_task_execution(session_id, "get_user_input_task", worker_id)
-        
-        # Route the request
-        task_result = ray.get(ray_system.route_request_task.remote(session_id))
-        worker_id = task_result.get("worker_info", {}).get("worker_id", "unknown")
-        log_task_execution(session_id, "route_request_task", worker_id)
-        
-        # Get updated state to determine destination
-        state = get_state_manager().load_state(session_id)
-        destination = state.destination
-        
-        # Execute appropriate action based on destination
-        if destination == "search_internet":
-            log_task_execution(session_id, "perform_internet_search_task")
-            ray.get(ray_system.perform_internet_search_task.remote(session_id))
-        elif destination == "search_github":
-            log_task_execution(session_id, "perform_github_search_task")
-            ray.get(ray_system.perform_github_search_task.remote(session_id))
-        elif destination == "search_atlassian":
-            log_task_execution(session_id, "perform_atlassian_search_task")
-            ray.get(ray_system.perform_atlassian_search_task.remote(session_id))
-        elif destination == "search_google_maps":
-            log_task_execution(session_id, "perform_google_maps_search_task")
-            ray.get(ray_system.perform_google_maps_search_task.remote(session_id))
-        elif destination == "search_knowledge_base":
-            log_task_execution(session_id, "search_knowledge_base_task")
-            ray.get(ray_system.search_knowledge_base_task.remote(session_id))
-        elif destination == "search_sqlite":
-            log_task_execution(session_id, "search_sqlite_task")
-            ray.get(ray_system.search_sqlite_task.remote(session_id))
-        elif destination == "email_assistant":
-            log_task_execution(session_id, "get_email_data_task")
-            ray.get(ray_system.get_email_data_task.remote(session_id))
-        elif destination == "create_reply_email":
-            log_task_execution(session_id, "create_reply_email_task")
-            ray.get(ray_system.create_reply_email_task.remote(session_id))
-        elif destination == "general_ai_response":
-            task_result = ray.get(ray_system.generate_general_ai_response_task.remote(session_id))
-            worker_id = task_result.get("worker_info", {}).get("worker_id", "unknown")
-            log_task_execution(session_id, "generate_general_ai_response_task", worker_id)
-        else:
-            task_result = ray.get(ray_system.generate_general_ai_response_task.remote(session_id))
-            worker_id = task_result.get("worker_info", {}).get("worker_id", "unknown")
-            log_task_execution(session_id, "generate_general_ai_response_task", worker_id)
-        
-        # Generate final response
-        log_task_execution(session_id, "generate_final_response_task")
-        ray.get(ray_system.generate_final_response_task.remote(session_id))
-        
-        # Present response
-        log_task_execution(session_id, "present_response_task")
-        ray.get(ray_system.present_response_task.remote(session_id))
-        
-    except Exception as e:
-        # Log error and re-raise
-        print(f"Error in Ray processing: {str(e)}")
-        raise
+
 
 @app.post("/session/{session_id}/resume/{step_number}")
 async def resume_from_step(session_id: str, step_number: int) -> SessionResponse:
     """Resume conversation from a specific step"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -239,7 +185,7 @@ async def resume_from_step(session_id: str, step_number: int) -> SessionResponse
             raise HTTPException(status_code=400, detail=f"Cannot resume from step {step_number}")
         
         # Save the updated state
-        state_manager.save_state(state)
+        workflow_orchestrator.state_manager.save_state(state)
         
         return SessionResponse(
             session_id=state.session_id,
@@ -259,8 +205,10 @@ async def resume_from_step(session_id: str, step_number: int) -> SessionResponse
 async def get_session_history(session_id: str):
     """Get the state history for a session"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -300,8 +248,10 @@ async def get_session_history(session_id: str):
 async def get_session_history_up_to_step(session_id: str, up_to_step: int):
     """Get the chat history up to and including a specific step"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -374,14 +324,24 @@ async def get_ray_status():
         
         cluster_info['workers'] = worker_info
         
+        # Add worker pool status if available
+        worker_pool_status = None
+        if workflow_orchestrator:
+            try:
+                worker_pool_status = await workflow_orchestrator.get_worker_status()
+            except Exception as e:
+                print(f"Error getting worker pool status: {e}")
+        
         return {
             "ray_healthy": ray_manager.is_healthy(),
-            "cluster_info": cluster_info
+            "cluster_info": cluster_info,
+            "worker_pools": worker_pool_status
         }
     except Exception as e:
         return {
             "ray_healthy": False,
             "cluster_info": {"status": False, "error": str(e)},
+            "worker_pools": None,
             "error": str(e)
         }
 
@@ -401,28 +361,53 @@ async def get_server_status():
     
     return {"servers": servers, "status": "available"}
 
+@app.get("/workers/status")
+async def get_worker_pool_status():
+    """Get detailed status of worker pools"""
+    try:
+        if not workflow_orchestrator:
+            return {
+                "status": "unavailable",
+                "error": "Workflow orchestrator not initialized"
+            }
+        
+        worker_status = await workflow_orchestrator.get_worker_status()
+        return {
+            "status": "available",
+            "worker_pools": worker_status
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
 @app.get("/ray/task-logs/{session_id}")
 async def get_task_logs(session_id: str):
     """Get recent task execution logs for a session"""
-    with log_lock:
-        session_logs = [
-            log for log in task_execution_log 
-            if log["session_id"] == session_id
-        ]
-        return {"logs": list(session_logs)}
+    session_logs = get_logs_from_logger(session_id)
+    return {"logs": session_logs}
 
 @app.get("/ray/task-logs")
 async def get_all_task_logs():
     """Get all recent task execution logs"""
-    with log_lock:
-        return {"logs": list(task_execution_log)}
+    all_logs = get_logs_from_logger()
+    return {"logs": all_logs}
+
+@app.get("/ray/task-stats")
+async def get_task_stats():
+    """Get task execution statistics"""
+    stats = get_log_stats()
+    return {"stats": stats}
 
 @app.get("/session/{session_id}/timeline")
 async def get_session_timeline(session_id: str):
     """Get the conversation timeline with active and removed steps"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -441,8 +426,10 @@ async def get_session_timeline(session_id: str):
 async def get_active_steps(session_id: str):
     """Get only the active steps in the current timeline"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -472,8 +459,10 @@ async def get_active_steps(session_id: str):
 async def get_removed_steps(session_id: str):
     """Get all removed steps for observability"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -504,8 +493,10 @@ async def get_removed_steps(session_id: str):
 async def get_step_details(session_id: str, step_number: int, include_removed: bool = False):
     """Get detailed information about a specific step"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
@@ -553,8 +544,10 @@ async def get_step_details(session_id: str, step_number: int, include_removed: b
 async def get_session_graph(session_id: str):
     """Get conversation timeline as graph data for visualization"""
     try:
-        state_manager = get_state_manager()
-        state = state_manager.load_state(session_id)
+        if not workflow_orchestrator:
+            raise HTTPException(status_code=503, detail="Workflow orchestrator not initialized")
+        
+        state = workflow_orchestrator.get_session_state(session_id)
         if not state:
             raise HTTPException(status_code=404, detail="Session not found")
         
