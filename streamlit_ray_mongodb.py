@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 import ray
 from pymongo import MongoClient
 import os
+from ray_cluster_manager import get_ray_manager
 
 # FastAPI backend URL
 BACKEND_URL = "http://localhost:8000"
@@ -81,18 +82,57 @@ def check_mongodb_status():
         return False
 
 
-@st.cache_data(ttl=10)  # Cache for 10 seconds
-def check_ray_status():
-    """Check Ray cluster status"""
+@st.cache_data(ttl=5)  # Cache for 5 seconds
+def get_ray_cluster_info():
+    """Get detailed Ray cluster information via FastAPI backend"""
     try:
-        # Try to initialize Ray if not already initialized
-        if not ray.is_initialized():
-            ray.init(ignore_reinit_error=True, address="auto", _node_ip_address="127.0.0.1")
-        
-        # Check if Ray is working by getting cluster resources
-        resources = ray.cluster_resources()
-        return len(resources) > 0
-    except Exception:
+        response = requests.get(f"{BACKEND_URL}/ray/status", timeout=2)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("cluster_info", {
+                'status': False,
+                'error': 'No cluster info',
+                'resources': {},
+                'nodes': [],
+                'tasks': [],
+                'num_cpus': 0,
+                'num_nodes': 0,
+                'num_workers': 0
+            })
+        return {
+            'status': False,
+            'error': 'Backend not responding',
+            'resources': {},
+            'nodes': [],
+            'tasks': [],
+            'num_cpus': 0,
+            'num_nodes': 0,
+            'num_workers': 0
+        }
+    except Exception as e:
+        print(f"Ray cluster info error: {e}")
+        return {
+            'status': False,
+            'error': str(e),
+            'resources': {},
+            'nodes': [],
+            'tasks': [],
+            'num_cpus': 0,
+            'num_nodes': 0,
+            'num_workers': 0
+        }
+
+@st.cache_data(ttl=10)  # Cache for 10 seconds  
+def check_ray_status():
+    """Check Ray cluster status via FastAPI backend"""
+    try:
+        response = requests.get(f"{BACKEND_URL}/ray/status", timeout=2)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("ray_healthy", False)
+        return False
+    except Exception as e:
+        print(f"Ray status check error: {e}")
         return False
 
 
@@ -104,6 +144,104 @@ def check_backend_status():
         return response.status_code == 200
     except:
         return False
+
+def get_session_ray_tasks(session_id):
+    """Get Ray tasks related to the current session"""
+    try:
+        ray_info = get_ray_cluster_info()
+        session_tasks = []
+        
+        for task in ray_info['tasks']:
+            # Check if task name suggests it's related to our session
+            # (This is a heuristic - in production you'd want better task tracking)
+            if any(keyword in task['name'].lower() for keyword in [
+                'route_request', 'perform_internet_search', 'perform_github_search',
+                'perform_atlassian_search', 'generate_general_ai_response',
+                'search_knowledge_base', 'search_sqlite', 'perform_google_maps_search'
+            ]):
+                session_tasks.append(task)
+        
+        return session_tasks
+    except:
+        return []
+
+def show_ray_dashboard():
+    """Show detailed Ray cluster dashboard"""
+    st.sidebar.markdown("### 🔬 Ray Cluster Dashboard")
+    
+    ray_info = get_ray_cluster_info()
+    
+    if not ray_info['status']:
+        st.sidebar.error("❌ Ray cluster not available")
+        if 'error' in ray_info:
+            st.sidebar.caption(f"Error: {ray_info['error']}")
+        return
+    
+    # Cluster overview metrics
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        st.sidebar.metric("Nodes", ray_info['num_nodes'])
+        st.sidebar.metric("Workers", ray_info['num_workers'])
+    with col2:
+        st.sidebar.metric("CPUs", ray_info['num_cpus'])
+        st.sidebar.metric("Active Tasks", len(ray_info['tasks']))
+    
+    # Resource utilization
+    if ray_info['resources']:
+        st.sidebar.markdown("**📊 Resource Usage:**")
+        total_cpus = ray_info['resources'].get('CPU', 0)
+        used_cpus = len(ray_info['tasks'])  # Approximation
+        if total_cpus > 0:
+            utilization = min(used_cpus / total_cpus, 1.0)
+            st.sidebar.progress(utilization, text=f"CPU: {used_cpus}/{int(total_cpus)}")
+    
+    # Live task monitoring
+    if ray_info['tasks']:
+        st.sidebar.markdown("**🔄 Live Task Monitor:**")
+        for task in ray_info['tasks']:
+            task_name = task['name'].replace('ray_mongodb_system.', '').replace('_task', '')
+            state_color = "🟢" if task['state'] == 'RUNNING' else "🟡"
+            
+            with st.sidebar.expander(f"{state_color} {task_name}", expanded=False):
+                st.write(f"**Task ID:** `{task['task_id']}`")
+                st.write(f"**State:** {task['state']}")
+                st.write(f"**Worker:** `{task['worker_id']}`")
+                st.write(f"**Node:** `{task['node_id']}`")
+    
+    # Node details
+    if ray_info['nodes']:
+        st.sidebar.markdown("**🖥️ Node Details:**")
+        for i, node in enumerate(ray_info['nodes']):
+            if node.get('Alive', False):
+                node_id = node.get('NodeID', 'unknown')[:8]
+                resources = node.get('Resources', {})
+                cpu = int(resources.get('CPU', 0))
+                memory = resources.get('memory', 0)
+                
+                with st.sidebar.expander(f"Node {i+1}: {node_id}", expanded=False):
+                    st.write(f"**IP:** {node.get('NodeManagerAddress', 'unknown')}")
+                    st.write(f"**CPUs:** {cpu}")
+                    if memory:
+                        st.write(f"**Memory:** {memory/1e9:.1f} GB")
+                    st.write(f"**Status:** {'🟢 Alive' if node.get('Alive') else '🔴 Dead'}")
+    
+    # Control buttons
+    col1, col2 = st.sidebar.columns(2)
+    with col1:
+        if st.button("🔄 Refresh", help="Manually refresh Ray cluster information"):
+            get_ray_cluster_info.clear()
+            st.rerun()
+    with col2:
+        if st.button("🔁 Restart", help="Restart Ray cluster"):
+            ray_manager = get_ray_manager()
+            with st.spinner("Restarting Ray..."):
+                success = ray_manager.restart()
+            if success:
+                st.success("Ray restarted successfully!")
+            else:
+                st.error("Failed to restart Ray")
+            get_ray_cluster_info.clear()
+            st.rerun()
 
 
 def show_server_status(session_data):
@@ -152,32 +290,65 @@ def show_server_status(session_data):
     # Add a divider
     st.sidebar.divider()
     
-    # Show conversation history if available
+    # Show enhanced conversation timeline if available
     try:
         if st.session_state.session_id:
-            response = requests.get(f"{BACKEND_URL}/session/{st.session_state.session_id}/history")
-            if response.status_code == 200:
-                history_data = response.json()
-                if history_data.get("history"):
-                    st.sidebar.title("📚 Conversation History")
-                    st.sidebar.caption(f"Current Step: {history_data.get('current_step', 0)}")
+            # Get timeline data
+            timeline_response = requests.get(f"{BACKEND_URL}/session/{st.session_state.session_id}/timeline")
+            if timeline_response.status_code == 200:
+                timeline_data = timeline_response.json()["timeline"]
+                
+                if timeline_data.get("active_steps") or timeline_data.get("removed_steps"):
+                    st.sidebar.title("📚 Conversation Timeline")
                     
-                    for step in history_data["history"]:
-                        step_num = step["step"]
-                        action = step["action"].replace("_", " ").title()
-                        has_result = "✅" if step["has_result"] else "❌"
-                        
-                        if st.sidebar.button(f"Step {step_num}: {action} {has_result}", 
-                                           key=f"step_{step_num}",
-                                           help=f"Resume from: {step['user_input'][:50]}..."):
-                            # Resume from this step
-                            resume_response = requests.post(f"{BACKEND_URL}/session/{st.session_state.session_id}/resume/{step_num}")
-                            if resume_response.status_code == 200:
-                                st.session_state.session_data = resume_response.json()
-                                st.rerun()
+                    # Show timeline summary
+                    col1, col2 = st.sidebar.columns(2)
+                    with col1:
+                        st.sidebar.caption(f"🔄 Version: {timeline_data.get('current_version', 1)}")
+                        st.sidebar.caption(f"📍 Current Step: {timeline_data.get('current_step', 0)}")
+                    with col2:
+                        st.sidebar.caption(f"✅ Active: {timeline_data.get('active_steps_count', 0)}")
+                        st.sidebar.caption(f"🗑️ Removed: {timeline_data.get('removed_steps_count', 0)}")
+                    
+                    # Show active steps
+                    if timeline_data.get("active_steps"):
+                        st.sidebar.markdown("**🟢 Active Timeline:**")
+                        for step in timeline_data["active_steps"]:
+                            step_num = step["step"]
+                            action = step["action"].replace("_", " ").title()
+                            has_result = "✅" if step["has_result"] else "❌"
+                            version = step.get("version", 1)
+                            
+                            # Create button with version info
+                            button_text = f"Step {step_num}.{version}: {action} {has_result}"
+                            if st.sidebar.button(button_text, 
+                                               key=f"active_step_{step_num}",
+                                               help=f"Resume from: {step.get('user_input', 'N/A')[:50]}..."):
+                                # Resume from this step
+                                resume_response = requests.post(f"{BACKEND_URL}/session/{st.session_state.session_id}/resume/{step_num}")
+                                if resume_response.status_code == 200:
+                                    st.session_state.session_data = resume_response.json()
+                                    st.success(f"Resumed from step {step_num}")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to resume from step")
+                    
+                    # Show removed steps in an expander for observability
+                    if timeline_data.get("removed_steps"):
+                        with st.sidebar.expander(f"🗑️ Removed Steps ({len(timeline_data['removed_steps'])})", expanded=False):
+                            for step in timeline_data["removed_steps"]:
+                                step_num = step["step"]
+                                action = step["action"].replace("_", " ").title()
+                                version = step.get("version", 1)
+                                removed_reason = step.get("removed_reason", "Unknown")
+                                
+                                st.write(f"**Step {step_num}.{version}:** {action}")
+                                st.caption(f"Removed: {removed_reason}")
+                                st.caption(f"At: {step.get('removed_at', 'Unknown')[-8:]}")
                     
                     st.sidebar.divider()
-    except:
+    except Exception as e:
+        print(f"Timeline error: {e}")
         pass
     
     # Show system status
@@ -203,27 +374,121 @@ def show_server_status(session_data):
     else:
         st.sidebar.error("❌ MongoDB Disconnected")
     
-    # Ray status
-    if check_ray_status():
+    # Ray status with detailed information
+    ray_info = get_ray_cluster_info()
+    if ray_info['status']:
         st.sidebar.success("✅ Ray Cluster Active")
+        
+        # Show cluster overview
+        col1, col2 = st.sidebar.columns(2)
+        with col1:
+            st.sidebar.caption(f"🖥️ Nodes: {ray_info['num_nodes']}")
+            st.sidebar.caption(f"⚡ CPUs: {ray_info['num_cpus']}")
+        with col2:
+            st.sidebar.caption(f"👷 Workers: {ray_info['num_workers']}")
+            st.sidebar.caption(f"🔄 Tasks: {len(ray_info['tasks'])}")
+        
+        # Show worker details
+        workers = ray_info.get('workers', [])
+        if workers:
+            st.sidebar.markdown("**👷 Available Workers:**")
+            for i, worker in enumerate(workers):
+                worker_status = "🟢" if worker['status'] == 'alive' else "🔴"
+                st.sidebar.caption(f"{worker_status} Worker {i+1}: `{worker['node_id']}`")
+                st.sidebar.caption(f"   📍 {worker['hostname']} ({worker['address']})")
+                st.sidebar.caption(f"   💾 {worker['cpus']} CPUs, {worker['memory_gb']} GB RAM")
+        
+        # Show recent task executions for this session
         try:
-            if ray.is_initialized():
-                resources = ray.cluster_resources()
-                cpu_count = resources.get('CPU', 0)
-                st.sidebar.caption(f"CPUs: {int(cpu_count)}")
+            if st.session_state.session_id:
+                response = requests.get(f"{BACKEND_URL}/ray/task-logs/{st.session_state.session_id}", timeout=2)
+                if response.status_code == 200:
+                    logs_data = response.json()
+                    logs = logs_data.get("logs", [])
+                    if logs:
+                        st.sidebar.markdown("**🎯 Recent Task Executions:**")
+                        for log in logs[-3:]:  # Show last 3 tasks
+                            task_name = log["task_name"].replace("_task", "").replace("_", " ").title()
+                            timestamp = log["timestamp"][:19].replace("T", " ")
+                            worker_id = log["worker_id"]
+                            st.sidebar.caption(f"🔄 {task_name}")
+                            st.sidebar.caption(f"   👷 Worker: `{worker_id}` at {timestamp[-8:]}")
         except:
             pass
+        
+        # Show session-specific tasks first
+        session_tasks = get_session_ray_tasks(st.session_state.get('session_id', ''))
+        if session_tasks:
+            st.sidebar.markdown("**🎯 Your Session Tasks:**")
+            for task in session_tasks:
+                task_name = task['name'].replace('ray_mongodb_system.', '').replace('_task', '')
+                state_emoji = "🟡" if task['state'] == 'RUNNING' else "🔵"
+                st.sidebar.caption(f"{state_emoji} {task_name}")
+                st.sidebar.caption(f"   Worker: {task['worker_id']}")
+        
+        # Show all active tasks if any
+        if ray_info['tasks']:
+            remaining_tasks = [t for t in ray_info['tasks'] if t not in session_tasks]
+            if remaining_tasks:
+                st.sidebar.markdown("**🔄 Other Active Tasks:**")
+                for task in remaining_tasks[:2]:  # Show max 2 other tasks
+                    task_name = task['name'].replace('ray_mongodb_system.', '').replace('_task', '')
+                    state_emoji = "🟡" if task['state'] == 'RUNNING' else "🔵"
+                    st.sidebar.caption(f"{state_emoji} {task_name}")
+                    st.sidebar.caption(f"   Worker: {task['worker_id']}")
+                
+                if len(remaining_tasks) > 2:
+                    st.sidebar.caption(f"   ... and {len(remaining_tasks) - 2} more")
+        
+        # Show worker details in an expander
+        with st.sidebar.expander("🔍 Ray Cluster Details"):
+            st.write("**Nodes:**")
+            for i, node in enumerate(ray_info['nodes']):
+                if node.get('Alive', False):
+                    node_id = node.get('NodeID', 'unknown')[:8]
+                    node_ip = node.get('NodeManagerAddress', 'unknown')
+                    resources = node.get('Resources', {})
+                    cpu = int(resources.get('CPU', 0))
+                    st.write(f"• Node {i+1}: `{node_id}` ({node_ip})")
+                    st.write(f"  CPUs: {cpu}")
+            
+            if ray_info['tasks']:
+                st.write("**All Active Tasks:**")
+                for task in ray_info['tasks']:
+                    st.write(f"• `{task['task_id']}`: {task['name']}")
+                    st.write(f"  State: {task['state']}, Worker: `{task['worker_id']}`")
     else:
         st.sidebar.error("❌ Ray Cluster Inactive")
+        if 'error' in ray_info:
+            st.sidebar.caption(f"Error: {ray_info['error'][:50]}...")
     
     # Additional system info
     st.sidebar.caption(f"MongoDB URI: {MONGO_URI.split('@')[-1] if '@' in MONGO_URI else MONGO_URI}")
     st.sidebar.caption(f"Database: {DB_NAME}")
+    
+    # Ray Dashboard Toggle
+    st.sidebar.divider()
+    if st.sidebar.checkbox("🔬 Ray Dashboard", value=False, help="Show detailed Ray cluster monitoring"):
+        show_ray_dashboard()
 
 
 async def process_user_input(user_input: str):
     """Process user input through the FastAPI backend"""
     try:
+        # Create placeholders for real-time monitoring
+        task_status_placeholder = st.empty()
+        worker_status_placeholder = st.empty()
+        
+        # Show initial processing status
+        with task_status_placeholder.container():
+            st.info("🚀 Starting Ray tasks...")
+        
+        # Show worker assignment
+        ray_info = get_ray_cluster_info()
+        if ray_info.get('status') and ray_info.get('workers'):
+            with worker_status_placeholder.container():
+                st.info(f"👷 Assigning to {len(ray_info['workers'])} available worker(s)")
+        
         # Send request to FastAPI backend
         payload = {
             "session_id": st.session_state.session_id,
@@ -235,7 +500,19 @@ async def process_user_input(user_input: str):
         if response.status_code == 200:
             # Update session data with response
             st.session_state.session_data = response.json()
+            
+            # Show completion status
+            with task_status_placeholder.container():
+                st.success("✅ Ray tasks completed successfully!")
+            
+            # Clear status after a moment
+            import time
+            time.sleep(1)
+            task_status_placeholder.empty()
+            worker_status_placeholder.empty()
         else:
+            task_status_placeholder.empty()
+            worker_status_placeholder.empty()
             st.error(f"Backend error: {response.status_code}")
             
     except requests.exceptions.ConnectionError:

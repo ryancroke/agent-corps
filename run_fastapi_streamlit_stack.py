@@ -13,6 +13,13 @@ import threading
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Import Ray manager for initialization check
+try:
+    from ray_cluster_manager import get_ray_manager
+    RAY_MANAGER_AVAILABLE = True
+except ImportError:
+    RAY_MANAGER_AVAILABLE = False
+
 def setup_environment():
     """Basic environment setup"""
     # Load .env file if it exists
@@ -111,6 +118,17 @@ def main():
     # Setup environment
     setup_environment()
     
+    # Initialize Ray cluster if manager is available
+    if RAY_MANAGER_AVAILABLE:
+        print("🔧 Initializing Ray cluster...")
+        ray_manager = get_ray_manager()
+        if ray_manager.init_ray():
+            print("✅ Ray cluster initialized successfully")
+        else:
+            print("⚠️  Ray cluster initialization failed, will retry in backend")
+    else:
+        print("⚠️  Ray manager not available, will initialize in backend")
+    
     # Start FastAPI backend
     fastapi_process = start_fastapi_backend()
     if not fastapi_process:
@@ -143,6 +161,12 @@ def main():
         print("🛑 Shutting down services...")
         streamlit_process.terminate()
         fastapi_process.terminate()
+        
+        # Cleanup Ray if manager is available
+        if RAY_MANAGER_AVAILABLE:
+            print("🔧 Cleaning up Ray cluster...")
+            ray_manager = get_ray_manager()
+            ray_manager.cleanup()
         
         # Wait for processes to terminate
         streamlit_process.wait()

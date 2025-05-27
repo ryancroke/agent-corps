@@ -19,8 +19,7 @@ load_dotenv()
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
-# Initialize Ray
-ray.init(ignore_reinit_error=True)
+# Ray will be initialized by the Ray manager when needed
 
 # MongoDB connection
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
@@ -56,6 +55,11 @@ class StateSnapshot:
     new_state: Dict[str, Any]
     result_stored_in: Optional[str]
     has_result: bool
+    # Versioning and observability
+    version: int = 1  # Version number for this step
+    is_active: bool = True  # Whether this step is in the current timeline
+    removed_at: Optional[str] = None  # When this step was removed from timeline
+    removed_reason: Optional[str] = None  # Why this step was removed
     # Store the actual results for this step
     internet_search_results: Optional[str] = None
     github_search_results: Optional[str] = None
@@ -87,6 +91,8 @@ class ConversationState:
     # Historical state management
     state_history: List[StateSnapshot] = None
     current_step: int = 0
+    current_version: int = 1  # Current version of the conversation
+    total_steps_created: int = 0  # Total number of steps ever created (for unique IDs)
     
     # Current active results (from the current or most recent relevant step)
     internet_search_results: Optional[str] = None
@@ -112,6 +118,7 @@ class ConversationState:
                           previous_mode: str, new_mode: str, result_key: Optional[str] = None):
         """Add a new state snapshot to history"""
         self.current_step += 1
+        self.total_steps_created += 1
         
         snapshot = StateSnapshot(
             step=self.current_step,
@@ -130,7 +137,9 @@ class ConversationState:
                 "destination": destination
             },
             result_stored_in=result_key,
-            has_result=result_key is not None
+            has_result=result_key is not None,
+            version=self.current_version,
+            is_active=True
         )
         
         # Copy current results to the snapshot
@@ -155,21 +164,31 @@ class ConversationState:
         return None
     
     def resume_from_step(self, step_number: int) -> bool:
-        """Resume conversation from a specific step"""
-        if step_number < 1 or step_number > len(self.state_history):
-            return False
-        
-        # Find the snapshot for this step
+        """Resume conversation from a specific step with full observability"""
+        # Find the target snapshot (must be active)
         target_snapshot = None
         for snapshot in self.state_history:
-            if snapshot.step == step_number:
+            if snapshot.step == step_number and snapshot.is_active:
                 target_snapshot = snapshot
                 break
         
         if not target_snapshot:
             return False
         
-        # Restore state from that snapshot
+        # Mark all steps after the target as removed
+        removed_steps = []
+        for snapshot in self.state_history:
+            if snapshot.step > step_number and snapshot.is_active:
+                snapshot.is_active = False
+                snapshot.removed_at = datetime.utcnow().isoformat()
+                snapshot.removed_reason = f"Resumed from step {step_number}"
+                removed_steps.append(snapshot.step)
+        
+        # Increment version for new timeline
+        self.current_version += 1
+        
+        # Update current state
+        self.current_step = step_number
         self.current_mode = target_snapshot.new_state["current_mode"]
         self.email_state = target_snapshot.new_state.get("email_state")
         self.destination = target_snapshot.destination
@@ -181,10 +200,11 @@ class ConversationState:
         # Each step adds 2 messages (user + assistant)
         self.chat_history = self.chat_history[:step_number * 2]
         
+        print(f"Resumed from step {step_number}, removed steps: {removed_steps}, new version: {self.current_version}")
         return True
     
     def _restore_results_up_to_step(self, step_number: int):
-        """Restore the most recent results for each type up to the given step"""
+        """Restore the most recent results for each type up to the given step (only active steps)"""
         result_types = [
             'internet_search_results', 'github_search_results', 'general_ai_response',
             'atlassian_search_results', 'knowledge_base_results', 'gmaps_results',
@@ -195,14 +215,62 @@ class ConversationState:
         for result_type in result_types:
             setattr(self, result_type, None)
         
-        # Restore from history up to the target step
+        # Restore from history up to the target step (only active steps)
         for snapshot in self.state_history:
-            if snapshot.step <= step_number:
+            if snapshot.step <= step_number and snapshot.is_active:
                 for result_type in result_types:
                     if hasattr(snapshot, result_type):
                         result = getattr(snapshot, result_type, None)
                         if result:
                             setattr(self, result_type, result)
+    
+    def get_active_steps(self) -> List[StateSnapshot]:
+        """Get all active steps in the current timeline"""
+        return [snapshot for snapshot in self.state_history if snapshot.is_active]
+    
+    def get_removed_steps(self) -> List[StateSnapshot]:
+        """Get all removed steps for observability"""
+        return [snapshot for snapshot in self.state_history if not snapshot.is_active]
+    
+    def get_step_by_number(self, step_number: int, include_removed: bool = False) -> Optional[StateSnapshot]:
+        """Get a specific step by number"""
+        for snapshot in self.state_history:
+            if snapshot.step == step_number:
+                if include_removed or snapshot.is_active:
+                    return snapshot
+        return None
+    
+    def get_timeline_summary(self) -> Dict[str, Any]:
+        """Get a summary of the conversation timeline"""
+        active_steps = self.get_active_steps()
+        removed_steps = self.get_removed_steps()
+        
+        return {
+            "current_version": self.current_version,
+            "current_step": self.current_step,
+            "total_steps_created": self.total_steps_created,
+            "active_steps_count": len(active_steps),
+            "removed_steps_count": len(removed_steps),
+            "active_steps": [
+                {
+                    "step": s.step,
+                    "action": s.action,
+                    "timestamp": s.timestamp,
+                    "has_result": s.has_result,
+                    "version": s.version
+                } for s in active_steps
+            ],
+            "removed_steps": [
+                {
+                    "step": s.step,
+                    "action": s.action,
+                    "timestamp": s.timestamp,
+                    "removed_at": s.removed_at,
+                    "removed_reason": s.removed_reason,
+                    "version": s.version
+                } for s in removed_steps
+            ]
+        }
 
 class StateManager:
     def __init__(self, mongo_uri: str = MONGO_URI, db_name: str = DB_NAME):
@@ -359,9 +427,37 @@ def get_mcp_config():
     return add_keys_to_config()
 
 # Ray Tasks (converted from Burr actions)
+def get_worker_info():
+    """Get current worker information"""
+    try:
+        import os
+        
+        # Use process ID as the primary worker identifier
+        worker_id = f"pid-{os.getpid()}"
+        
+        # Get node ID from Ray context
+        node_id = 'unknown'
+        try:
+            runtime_context = ray.get_runtime_context()
+            if hasattr(runtime_context, 'get_node_id'):
+                node_id = runtime_context.get_node_id()
+        except:
+            pass
+        
+        return {
+            'worker_id': worker_id,
+            'node_id': node_id[:8] if node_id != 'unknown' else 'unknown'
+        }
+    except Exception as e:
+        print(f"Error getting worker info: {e}")
+        return {'worker_id': f"pid-{os.getpid()}", 'node_id': 'unknown'}
+
 @ray.remote
-def get_user_input_task(session_id: str, user_input: str) -> str:
+def get_user_input_task(session_id: str, user_input: str) -> dict:
     """Ray task for getting user input"""
+    worker_info = get_worker_info()
+    print(f">>> [Worker {worker_info['worker_id']}] Processing user input: {user_input[:50]}...")
+    
     state_manager = get_state_manager()
     state = state_manager.load_state(session_id)
     if not state:
@@ -373,11 +469,14 @@ def get_user_input_task(session_id: str, user_input: str) -> str:
     state.next_action = ActionType.ROUTE_REQUEST.value
     
     state_manager.save_state(state)
-    return session_id
+    return {"session_id": session_id, "worker_info": worker_info}
 
 @ray.remote
-def route_request_task(session_id: str) -> str:
+def route_request_task(session_id: str) -> dict:
     """Ray task for routing requests"""
+    worker_info = get_worker_info()
+    print(f">>> [Worker {worker_info['worker_id']}] Routing request...")
+    
     state_manager = get_state_manager()
     state = state_manager.load_state(session_id)
     
@@ -409,7 +508,7 @@ def route_request_task(session_id: str) -> str:
     
     state.last_action = ActionType.ROUTE_REQUEST.value
     state_manager.save_state(state)
-    return session_id
+    return {"session_id": session_id, "worker_info": worker_info}
 
 async def _determine_destination(state: ConversationState, llm: ChatOpenAI) -> str:
     """Helper function to determine the appropriate destination for user input."""
@@ -479,9 +578,11 @@ def _validate_destination(raw_destination: str) -> str:
 @ray.remote
 def perform_internet_search_task(session_id: str) -> str:
     """Ray task for internet search"""
+    worker_info = get_worker_info()
+    print(f">>> [Worker {worker_info['worker_id']}] Performing internet search...")
+    
     state_manager = get_state_manager()
     state = state_manager.load_state(session_id)
-    print(">>> Performing internet search...")
     
     query = state.user_input
     llm = get_llm()
@@ -519,9 +620,11 @@ def perform_internet_search_task(session_id: str) -> str:
 @ray.remote
 def perform_github_search_task(session_id: str) -> str:
     """Ray task for GitHub search"""
+    worker_info = get_worker_info()
+    print(f">>> [Worker {worker_info['worker_id']}] Searching GitHub...")
+    
     state_manager = get_state_manager()
     state = state_manager.load_state(session_id)
-    print(">>> Searching GitHub...")
     
     query = state.user_input
     chat_history = state.chat_history or []
@@ -664,11 +767,13 @@ def perform_atlassian_search_task(session_id: str) -> str:
     return session_id
 
 @ray.remote
-def generate_general_ai_response_task(session_id: str) -> str:
+def generate_general_ai_response_task(session_id: str) -> dict:
     """Ray task for generating general AI response"""
+    worker_info = get_worker_info()
+    print(f">>> [Worker {worker_info['worker_id']}] Generating general AI response...")
+    
     state_manager = get_state_manager()
     state = state_manager.load_state(session_id)
-    print(">>> Generating general AI response...")
     
     chat_history = state.chat_history or []
     truncated_history = truncate_history(chat_history)
@@ -703,7 +808,7 @@ def generate_general_ai_response_task(session_id: str) -> str:
     )
     
     state_manager.save_state(state)
-    return session_id
+    return {"session_id": session_id, "worker_info": worker_info}
 
 @ray.remote
 def prompt_for_more_task(session_id: str) -> str:
