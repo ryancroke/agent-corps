@@ -576,10 +576,10 @@ async def get_session_graph(session_id: str):
         # Process all steps and organize by timeline
         all_steps = sorted(state.state_history, key=lambda x: (x.step, x.version))
         
-        # Improved layout calculation
-        step_spacing_x = 200
-        version_spacing_y = 120
-        branch_offset_y = 60
+        # Improved layout calculation with good spacing
+        step_spacing_x = 250  # Good horizontal spacing
+        version_spacing_y = 150  # Good vertical spacing between versions
+        branch_offset_y = 100  # Good branch offset
         
         # Separate active and removed steps for better layout
         active_steps = [s for s in all_steps if s.is_active]
@@ -597,12 +597,27 @@ async def get_session_graph(session_id: str):
             color = "#2196F3" if step.has_result else "#FF9800"
             border_color = "#1976D2" if step.has_result else "#F57C00"
             
-            # Create cleaner action label
+            # Create cleaner, shorter action label to prevent text overlap
             action_parts = step.action.replace("_", " ").split()
             action_label = " ".join(word.capitalize() for word in action_parts)
             
+            # Map to shorter action names for better display
+            action_map = {
+                'Perform Internet Search': 'Web Search',
+                'Perform Github Search': 'GitHub', 
+                'Perform Atlassian Search': 'Atlassian',
+                'Generate General Ai Response': 'AI Response',
+                'Search Knowledge Base': 'Knowledge',
+                'Search Sqlite': 'Database',
+                'Perform Google Maps Search': 'Maps'
+            }
+            
+            action_display = action_map.get(action_label, action_label)
+            if len(action_display) > 12:
+                action_display = action_display[:9] + "..."
+            
             # Shorter, cleaner node label
-            node_label = f"Step {step.step}\n{action_label}"
+            node_label = f"Step {step.step}\n{action_display}"
             
             nodes.append({
                 "id": f"step_{step.step}_{step.version}",
@@ -655,11 +670,26 @@ async def get_session_graph(session_id: str):
                 color = "#9E9E9E"
                 border_color = "#757575"
                 
-                # Create action label
+                # Create shorter action label for removed nodes
                 action_parts = step.action.replace("_", " ").split()
                 action_label = " ".join(word.capitalize() for word in action_parts)
                 
-                node_label = f"Step {step.step}.{step.version}\n{action_label}\n(Removed)"
+                # Use same mapping for consistency
+                action_map = {
+                    'Perform Internet Search': 'Web',
+                    'Perform Github Search': 'GitHub', 
+                    'Perform Atlassian Search': 'Atlassian',
+                    'Generate General Ai Response': 'AI',
+                    'Search Knowledge Base': 'KB',
+                    'Search Sqlite': 'DB',
+                    'Perform Google Maps Search': 'Maps'
+                }
+                
+                action_display = action_map.get(action_label, action_label)
+                if len(action_display) > 8:
+                    action_display = action_display[:5] + "..."
+                
+                node_label = f"Step {step.step}.{step.version}\n{action_display}"
                 
                 nodes.append({
                     "id": f"step_{step.step}_{step.version}",

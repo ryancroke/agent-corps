@@ -596,14 +596,14 @@ async def main():
                         latest_step = max([s["step"] for s in active_steps]) if active_steps else selected_step
                         
                         if selected_step < latest_step:
-                            if st.button(f"🔄 Resume from Step {selected_step}", key="resume_from_chat", type="primary", use_container_width=True):
+                            if st.button(f"🔄 Resume from Step {selected_step}", key=f"resume_from_chat_{selected_step}", type="primary", use_container_width=True):
                                 st.session_state.show_resume_confirmation = selected_step
                                 st.rerun()
                         else:
                             st.info("📍 Latest Step")
                 except:
                     # Fallback: always show resume option
-                    if st.button(f"🔄 Resume from Step {selected_step}", key="resume_from_chat", type="primary", use_container_width=True):
+                    if st.button(f"🔄 Resume from Step {selected_step}", key=f"resume_from_chat_fallback_{selected_step}", type="primary", use_container_width=True):
                         st.session_state.show_resume_confirmation = selected_step
                         st.rerun()
             
@@ -644,8 +644,11 @@ async def main():
                                     if resume_response.status_code == 200:
                                         st.success(f"✅ Successfully resumed from step {selected_step}!")
                                         st.balloons()
+                                        # Clear the selected step to return to normal conversation flow
                                         st.session_state.selected_step_for_history = None
                                         st.session_state.show_resume_confirmation = None
+                                        # Set a flag to show a success message briefly
+                                        st.session_state.just_resumed_from_step = selected_step
                                         time.sleep(1)
                                         st.rerun()
                                     else:
@@ -675,6 +678,26 @@ async def main():
             # Show full conversation history
             filtered_history = session_data.get("chat_history", [])
         
+        # Check if user just resumed and show success message
+        if st.session_state.get('just_resumed_from_step'):
+            resumed_step = st.session_state.just_resumed_from_step
+            st.success(f"🎯 **Successfully resumed from Step {resumed_step}!** You can now continue the conversation from this point.")
+            
+            # Get the filtered history up to the resume point
+            try:
+                response = requests.get(f"{BACKEND_URL}/session/{st.session_state.session_id}/history/{resumed_step}")
+                if response.status_code == 200:
+                    history_data = response.json()
+                    filtered_history = history_data.get("chat_history", [])
+                else:
+                    # Fallback: show current history
+                    filtered_history = session_data.get("chat_history", [])
+            except:
+                filtered_history = session_data.get("chat_history", [])
+            
+            # Clear the flag after showing the message
+            st.session_state.just_resumed_from_step = None
+        
         # Display the chat history (either full or filtered)
         if selected_step:
             st.info(f"📖 Showing conversation up to Step {selected_step}")
@@ -692,7 +715,35 @@ async def main():
                     await process_user_input(prompt)
                 st.rerun()
         else:
-            st.info("💡 You're viewing historical conversation. Click 'Back to Latest' to continue chatting, or 'Resume' to continue from this point.")
+            # Check if this is the current active step (after resume) or just viewing history
+            try:
+                timeline_response = requests.get(f"{BACKEND_URL}/session/{st.session_state.session_id}/timeline")
+                if timeline_response.status_code == 200:
+                    timeline_data = timeline_response.json()["timeline"]
+                    active_steps = timeline_data.get("active_steps", [])
+                    latest_step = max([s["step"] for s in active_steps]) if active_steps else 0
+                    
+                    if selected_step == latest_step:
+                        # User is at the current active step (likely after resume)
+                        st.success(f"🎯 **You're now at Step {selected_step}** - This is your current conversation point after resuming.")
+                        st.info("💬 **Ready to continue!** You can now ask a new question to continue the conversation from this point.")
+                        
+                        # Allow user input from this point
+                        prompt = st.chat_input("Continue the conversation from here...", key="chat_input_resume")
+                        if prompt:
+                            # Clear the selected step to return to normal flow
+                            st.session_state.selected_step_for_history = None
+                            # Process through FastAPI backend
+                            with st.spinner("Processing your request..."):
+                                await process_user_input(prompt)
+                            st.rerun()
+                    else:
+                        # User is viewing historical conversation
+                        st.info("💡 You're viewing historical conversation. Click 'Back to Latest' to continue chatting, or 'Resume' to continue from this point.")
+                else:
+                    st.info("💡 You're viewing historical conversation. Click 'Back to Latest' to continue chatting, or 'Resume' to continue from this point.")
+            except:
+                st.info("💡 You're viewing historical conversation. Click 'Back to Latest' to continue chatting, or 'Resume' to continue from this point.")
     
     with tab2:
         st.markdown("### 📊 Conversation Visualization")
@@ -739,13 +790,21 @@ def create_conversation_graph(session_id: str):
             create_simple_graph_visualization(nodes, edges, stats, session_id)
             return
         
-        # Layout options with improved default
-        layout_type = st.selectbox(
-            "Graph Layout",
-            ["Smart Timeline", "Hierarchical", "Linear", "Grid"],
-            index=0,
-            help="Choose the layout algorithm for the graph"
-        )
+        # Layout and display options
+        col1, col2 = st.columns(2)
+        with col1:
+            layout_type = st.selectbox(
+                "Graph Layout",
+                ["Smart Timeline", "Hierarchical", "Linear", "Grid"],
+                index=0,
+                help="Choose the layout algorithm for the graph"
+            )
+        with col2:
+            show_text_labels = st.checkbox(
+                "Show Text Labels", 
+                value=True, 
+                help="Toggle text labels on nodes"
+            )
         
         # Calculate positions based on layout type
         pos = {}
@@ -762,18 +821,18 @@ def create_conversation_graph(session_id: str):
                 else:
                     step_num = node.get("step_number", 0)
                     version = node.get("version", 1)
-                    pos[node["id"]] = (step_num * 200, (version - 1) * 150)
+                    pos[node["id"]] = (step_num * 250, (version - 1) * 150)
         elif layout_type == "Linear":
             # Simple linear arrangement
             for i, node in enumerate(nodes):
-                pos[node["id"]] = (i * 150, 0)
+                pos[node["id"]] = (i * 200, 0)
         else:  # Grid
             # Grid layout
-            cols = 4
+            cols = 3
             for i, node in enumerate(nodes):
                 row = i // cols
                 col = i % cols
-                pos[node["id"]] = (col * 150, row * 100)
+                pos[node["id"]] = (col * 250, row * 150)
         
         # Create Plotly figure with dark theme
         fig = go.Figure()
@@ -843,32 +902,30 @@ def create_conversation_graph(session_id: str):
                     step_label = f"Step {node['step_number']}"
                     action_full = node['action'].replace('_', ' ').title()
                     
-                    # Create meaningful action descriptions
+                    # Simple action descriptions
                     action_map = {
-                        'Perform Internet Search': '🔍 Web Search',
-                        'Perform Github Search': '📂 GitHub Search', 
-                        'Perform Atlassian Search': '📋 Atlassian Search',
-                        'Generate General Ai Response': '🤖 AI Response',
-                        'Search Knowledge Base': '📚 Knowledge Base',
-                        'Search Sqlite': '🗄️ Database Search',
-                        'Perform Google Maps Search': '🗺️ Maps Search'
+                        'Perform Internet Search': 'Web Search',
+                        'Perform Github Search': 'GitHub', 
+                        'Perform Atlassian Search': 'Atlassian',
+                        'Generate General Ai Response': 'AI Response',
+                        'Search Knowledge Base': 'Knowledge',
+                        'Search Sqlite': 'Database',
+                        'Perform Google Maps Search': 'Maps'
                     }
                     
                     action_display = action_map.get(action_full, action_full)
-                    if len(action_display) > 20:
-                        action_display = action_display[:17] + "..."
+                    if len(action_display) > 12:
+                        action_display = action_display[:9] + "..."
                     
-                    # Show user input preview for context
-                    user_preview = node['user_input'][:20] + "..." if len(node['user_input']) > 20 else node['user_input']
-                    
-                    node_text.append(f"{step_label}\n{action_display}\n\"{user_preview}\"")
+                    # Simple format: Step number + action
+                    node_text.append(f"Step {node['step_number']}\n{action_display}")
                     
                     # Better color scheme with meaning
                     if node['has_result']:
                         node_colors.append("#28A745")  # Green for completed
                     else:
                         node_colors.append("#FFC107")  # Yellow for in progress
-                    node_sizes.append(50)
+                    node_sizes.append(60)  # Increased size to accommodate text better
                 
                 # Create hover info
                 if node["type"] == "start":
@@ -889,36 +946,38 @@ def create_conversation_graph(session_id: str):
                         'unknown': '❓ Unknown'
                     }.get(destination, f"📍 {destination.replace('_', ' ').title()}")
                     
+                    # Enhanced hover text
                     hover_text = f"""
                     <b>Step {node['step_number']}.{node['version']}</b><br>
                     Action: {action_display}<br>
                     Destination: {destination_display}<br>
                     Status: {'✅ Completed' if node['has_result'] else '⏳ In Progress'}<br>
                     Timestamp: {node['timestamp'][:19]}<br>
-                    User Input: "{node['user_input'][:60]}..."<br>
-                    <i>Click to view full conversation history from this step</i>
+                    User Input: "{node['user_input'][:80]}..."<br>
+                    <i>Click to view conversation history from this step</i>
                     """
                 
                 node_info.append(hover_text)
             
-            # Add active nodes trace with better styling
+            # Add active nodes trace with simple styling
+            
             fig.add_trace(go.Scatter(
                 x=node_x,
                 y=node_y,
-                mode='markers+text',
+                mode='markers+text' if show_text_labels else 'markers',
                 marker=dict(
-                    size=node_sizes,
+                    size=[35 if node["type"] == "start" else 45 for node in active_nodes],  # Smaller, consistent sizes
                     color=node_colors,
-                    line=dict(width=3, color='#2C3E50'),  # Dark border
+                    line=dict(width=2, color='#2C3E50'),  # Thinner border
                     opacity=1.0
                 ),
-                text=node_text,
-                textposition="middle center",
+                text=node_text if show_text_labels else None,
+                textposition="bottom center" if show_text_labels else None,  # Position text below nodes
                 textfont=dict(
-                    size=11, 
+                    size=10,  # Reasonable font size
                     color="white", 
-                    family="Arial Black"
-                ),
+                    family="Arial, sans-serif"
+                ) if show_text_labels else None,
                 hovertemplate='%{customdata}<extra></extra>',
                 customdata=node_info,
                 showlegend=False,
@@ -942,15 +1001,25 @@ def create_conversation_graph(session_id: str):
                 removed_x.append(x)
                 removed_y.append(y)
                 
-                # Shorter labels for removed nodes
-                step_label = f"Step {node['step_number']}"
-                action_short = node['action'].replace('_', ' ').replace('perform ', '').replace('search ', '').replace('generate ', '').title()
-                if len(action_short) > 12:
-                    action_short = action_short[:9] + "..."
-                removed_text.append(f"{step_label}\n{action_short}\n(Removed)")
+                # Simple labels for removed nodes
+                action_map = {
+                    'Perform Internet Search': 'Web Search',
+                    'Perform Github Search': 'GitHub', 
+                    'Perform Atlassian Search': 'Atlassian',
+                    'Generate General Ai Response': 'AI Response',
+                    'Search Knowledge Base': 'Knowledge',
+                    'Search Sqlite': 'Database',
+                    'Perform Google Maps Search': 'Maps'
+                }
+                action_full = node['action'].replace('_', ' ').title()
+                action_display = action_map.get(action_full, action_full)
+                if len(action_display) > 10:
+                    action_display = action_display[:7] + "..."
+                
+                removed_text.append(f"Step {node['step_number']}\n{action_display}")
                 
                 removed_colors.append("#6C757D")  # Gray
-                removed_sizes.append(30)
+                removed_sizes.append(45)  # Increased size for better text accommodation
                 
                 # Create hover info for removed nodes
                 destination = node.get('destination', 'general')
@@ -980,23 +1049,25 @@ def create_conversation_graph(session_id: str):
                 
                 removed_info.append(hover_text)
             
-            # Add removed nodes trace
+            # Add removed nodes trace with simple styling
+            
             fig.add_trace(go.Scatter(
                 x=removed_x,
                 y=removed_y,
-                mode='markers+text',
+                mode='markers+text' if show_text_labels else 'markers',
                 marker=dict(
-                    size=removed_sizes,
+                    size=[35 for _ in removed_nodes],  # Smaller, consistent size
                     color=removed_colors,
-                    line=dict(width=2, color='#495057'),  # Darker gray border
-                    opacity=0.8
+                    line=dict(width=1, color='#495057'),  # Thinner border
+                    opacity=0.7
                 ),
-                text=removed_text,
-                textposition="middle center",
+                text=removed_text if show_text_labels else None,
+                textposition="bottom center" if show_text_labels else None,  # Position text below nodes
                 textfont=dict(
-                    size=9, 
-                    color="white"
-                ),
+                    size=9,  # Slightly smaller for removed nodes
+                    color="white",
+                    family="Arial, sans-serif"
+                ) if show_text_labels else None,
                 hovertemplate='%{customdata}<extra></extra>',
                 customdata=removed_info,
                 showlegend=False,
@@ -1004,6 +1075,18 @@ def create_conversation_graph(session_id: str):
             ))
         
         # Update layout with dark theme and better styling
+        # Calculate dynamic margins and height based on content
+        all_y_positions = [pos[node["id"]][1] for node in nodes]
+        min_y = min(all_y_positions) if all_y_positions else 0
+        max_y = max(all_y_positions) if all_y_positions else 0
+        y_range = max_y - min_y
+        
+        # Dynamic height based on content spread
+        dynamic_height = max(600, min(1200, 600 + abs(min_y) * 2))
+        
+        # Larger margins to ensure text visibility
+        margin_settings = dict(b=100,l=80,r=80,t=100) if show_text_labels else dict(b=60,l=60,r=60,t=80)
+        
         fig.update_layout(
             title=dict(
                 text=f"📊 Conversation Timeline - Session {session_id[:8]}...",
@@ -1012,15 +1095,15 @@ def create_conversation_graph(session_id: str):
             ),
             showlegend=False,
             hovermode='closest',
-            margin=dict(b=60,l=40,r=40,t=80),
+            margin=margin_settings,
             annotations=[
                 dict(
                     text=f"📈 {stats['active_steps']} active • 🗑️ {stats['removed_steps']} removed • 🔄 {stats['versions']} versions • 🌿 {stats.get('branches', 0)} branches",
                     showarrow=False,
                     xref="paper", yref="paper",
-                    x=0.5, y=-0.08,
+                    x=0.5, y=-0.12,  # Moved further down to avoid overlap
                     xanchor="center", yanchor="top",
-                    font=dict(size=14, color="#E8E9EA")
+                    font=dict(size=12, color="#E8E9EA")
                 )
             ],
             xaxis=dict(
@@ -1032,7 +1115,10 @@ def create_conversation_graph(session_id: str):
                 title=dict(
                     text="Timeline Progression →",
                     font=dict(color="#E8E9EA", size=12)
-                )
+                ),
+                # Add padding to ensure text visibility
+                range=[min([pos[node["id"]][0] for node in nodes]) - 100, 
+                       max([pos[node["id"]][0] for node in nodes]) + 100] if nodes else [-100, 100]
             ),
             yaxis=dict(
                 showgrid=True,
@@ -1045,11 +1131,13 @@ def create_conversation_graph(session_id: str):
                 title=dict(
                     text="↑ Active Timeline | Removed Branches ↓",
                     font=dict(color="#E8E9EA", size=12)
-                )
+                ),
+                # Ensure all content is visible with padding
+                range=[min_y - 100, max_y + 100] if all_y_positions else [-100, 100]
             ),
             plot_bgcolor='#1E2329',  # Dark background
             paper_bgcolor='#2C3E50',  # Darker paper background
-            height=750,
+            height=dynamic_height,
             font=dict(color="#FFFFFF")
         )
         
@@ -1075,8 +1163,11 @@ def create_conversation_graph(session_id: str):
         # Display the graph
         st.plotly_chart(fig, use_container_width=True)
         
-        # Add a note about clicking steps
-        st.info("💡 **Tip:** Click on any step in the timeline controls below to view conversation history up to that point.")
+        # Add helpful tips
+        if show_text_labels:
+            st.info("💡 **Tip:** Hover over nodes for details. Click on any step in the timeline controls below to view conversation history. Uncheck 'Show Text Labels' for a cleaner view.")
+        else:
+            st.info("💡 **Tip:** Text labels are hidden. Hover over nodes to see details. Click on any step in the timeline controls below to view conversation history.")
         
         # Add enhanced graph statistics and controls
         add_graph_controls_and_stats(nodes, stats, session_id)
@@ -1197,13 +1288,13 @@ def add_graph_controls_and_stats(nodes, stats, session_id):
     # Add some spacing
     st.markdown("---")
     
-    # Enhanced legend with better explanations
-    with st.expander("📖 Graph Legend & Guide", expanded=False):
+    # Simple legend
+    with st.expander("📖 Graph Legend", expanded=False):
         col1, col2 = st.columns(2)
         
         with col1:
             st.markdown("""
-            **Node Types:**
+            **Node Colors:**
             - 🟢 **Green**: Start of conversation
             - 🔵 **Blue**: Active step with results
             - 🟠 **Orange**: Active step without results  
@@ -1212,18 +1303,15 @@ def add_graph_controls_and_stats(nodes, stats, session_id):
         
         with col2:
             st.markdown("""
-            **Connection Types:**
-            - **Thick Blue**: Main timeline flow
-            - **Thick Green**: Start connection
-            - **Dashed Red**: Resume branch points
-            - **Gray Lines**: Removed step connections
+            **Connections:**
+            - **Blue lines**: Main timeline flow
+            - **Green lines**: Start connection
+            - **Red dashed**: Resume branch points
+            - **Gray lines**: Removed step connections
             """)
         
         st.markdown("""
-        **Layout Guide:**
-        - **Top Row (y=0)**: Active conversation timeline
-        - **Bottom Rows (y<0)**: Removed steps organized by branch
-        - **Left to Right**: Chronological progression of steps
+        **Layout:** Active steps on top, removed steps below. Left to right shows chronological progression.
         """)
     
     # Enhanced statistics with better visual presentation
