@@ -1,0 +1,10 @@
+# DSPy and compatible versions
+dspy-ai==2.5.29
+litellm==1.57.4
+openai==1.57.0
+
+# Supporting packages
+python-dotenv>=1.0.0
+pandas>=2.0.0
+numpy>=1.24.0
+loguru>=0.7.0
