@@ -150,7 +150,7 @@ async def process_message(request: ProcessRequest) -> SessionResponse:
             raise HTTPException(status_code=404, detail="Session not found")
         
         # Process through workflow orchestrator using worker pools
-        updated_state = await workflow_orchestrator.continue_workflow(session_id, user_input)
+        updated_state = workflow_orchestrator.continue_workflow(session_id, user_input)
         
         return SessionResponse(
             session_id=updated_state.session_id,
@@ -328,7 +328,7 @@ async def get_ray_status():
         worker_pool_status = None
         if workflow_orchestrator:
             try:
-                worker_pool_status = await workflow_orchestrator.get_worker_status()
+                worker_pool_status = workflow_orchestrator.get_worker_status()
             except Exception as e:
                 print(f"Error getting worker pool status: {e}")
         
@@ -371,7 +371,7 @@ async def get_worker_pool_status():
                 "error": "Workflow orchestrator not initialized"
             }
         
-        worker_status = await workflow_orchestrator.get_worker_status()
+        worker_status = workflow_orchestrator.get_worker_status()
         return {
             "status": "available",
             "worker_pools": worker_status

@@ -98,7 +98,7 @@ class WorkerPool:
         required_type = action_to_worker_type.get(task_request.action_type, WorkerType.GENERAL)
         return self.worker_type == required_type
     
-    async def execute_task(self, task_request: TaskRequest) -> Any:
+    def execute_task(self, task_request: TaskRequest) -> Any:
         """Execute a single task"""
         if task_request.action_type not in self.task_mapping:
             raise ValueError(f"Unknown action type: {task_request.action_type}")
@@ -116,9 +116,9 @@ class WorkerPool:
                 user_input = task_request.kwargs.get('user_input')
                 if not user_input:
                     raise ValueError("user_input is required for GET_USER_INPUT action")
-                result = await task_func.remote(task_request.session_id, user_input)
+                result = ray.get(task_func.remote(task_request.session_id, user_input))
             else:
-                result = await task_func.remote(task_request.session_id)
+                result = ray.get(task_func.remote(task_request.session_id))
             
             execution_time = time.time() - start_time
             print(f"[{self.worker_id}] Completed task: {task_request.action_type} in {execution_time:.2f}s")
@@ -229,31 +229,31 @@ class WorkflowOrchestrator:
         else:  # unknown or default
             return ActionType.PROMPT_FOR_MORE.value
     
-    async def _find_available_worker(self, task_request: TaskRequest) -> Optional[Any]:
+    def _find_available_worker(self, task_request: TaskRequest) -> Optional[Any]:
         """Find an available worker that can handle the task"""
         # First, try to find a specialized worker
         preferred_workers = self.worker_pools.get(task_request.worker_type, [])
         
         # Check specialized workers first
         for worker in preferred_workers:
-            status = await worker.get_status.remote()
+            status = ray.get(worker.get_status.remote())
             if status["available"]:
-                can_handle = await worker.can_handle_task.remote(task_request)
+                can_handle = ray.get(worker.can_handle_task.remote(task_request))
                 if can_handle:
                     return worker
         
         # If no specialized worker available, try general workers
         if task_request.worker_type != WorkerType.GENERAL:
             for worker in self.worker_pools[WorkerType.GENERAL]:
-                status = await worker.get_status.remote()
+                status = ray.get(worker.get_status.remote())
                 if status["available"]:
-                    can_handle = await worker.can_handle_task.remote(task_request)
+                    can_handle = ray.get(worker.can_handle_task.remote(task_request))
                     if can_handle:
                         return worker
         
         return None
     
-    async def execute_action(self, session_id: str, action_type: str, **kwargs) -> Any:
+    def execute_action(self, session_id: str, action_type: str, **kwargs) -> Any:
         """
         Execute a specific action using the worker pool.
         
@@ -291,12 +291,12 @@ class WorkflowOrchestrator:
         )
         
         # Find available worker
-        worker = await self._find_available_worker(task_request)
+        worker = self._find_available_worker(task_request)
         if not worker:
             raise RuntimeError(f"No available worker for task: {action_type}")
         
         # Execute task
-        result = await worker.execute_task.remote(task_request)
+        result = ray.get(worker.execute_task.remote(task_request))
         return result
     
     def get_next_action(self, session_id: str) -> Optional[str]:
@@ -332,7 +332,7 @@ class WorkflowOrchestrator:
         # Default fallback
         return ActionType.GET_USER_INPUT.value
     
-    async def run_workflow(self, session_id: str, user_input: str = None, max_steps: int = 10) -> ConversationState:
+    def run_workflow(self, session_id: str, user_input: str = None, max_steps: int = 10) -> ConversationState:
         """
         Run the complete workflow for a conversation turn using the worker pool.
         
@@ -348,7 +348,7 @@ class WorkflowOrchestrator:
         
         # If user_input is provided, start with GET_USER_INPUT
         if user_input:
-            await self.execute_action(session_id, ActionType.GET_USER_INPUT.value, user_input=user_input)
+            self.execute_action(session_id, ActionType.GET_USER_INPUT.value, user_input=user_input)
             current_step += 1
         
         # Continue executing actions until we reach a stopping point
@@ -363,7 +363,7 @@ class WorkflowOrchestrator:
                 break
             
             print(f"Step {current_step}: Executing {next_action}")
-            await self.execute_action(session_id, next_action)
+            self.execute_action(session_id, next_action)
             current_step += 1
             
             # Check if we've reached a natural stopping point
@@ -374,7 +374,7 @@ class WorkflowOrchestrator:
         # Return final state
         return self.state_manager.load_state(session_id)
     
-    async def continue_workflow(self, session_id: str, user_input: str) -> ConversationState:
+    def continue_workflow(self, session_id: str, user_input: str) -> ConversationState:
         """
         Continue an existing workflow with new user input.
         
@@ -385,7 +385,7 @@ class WorkflowOrchestrator:
         Returns:
             The final conversation state
         """
-        return await self.run_workflow(session_id, user_input)
+        return self.run_workflow(session_id, user_input)
     
     def create_new_session(self) -> str:
         """
@@ -422,7 +422,7 @@ class WorkflowOrchestrator:
         state = self.state_manager.load_state(session_id)
         return state.chat_history if state else []
     
-    async def get_worker_status(self) -> Dict[str, Any]:
+    def get_worker_status(self) -> Dict[str, Any]:
         """Get status of all workers in the pool"""
         status = {
             "total_workers": len(self.all_workers),
@@ -439,7 +439,7 @@ class WorkflowOrchestrator:
             }
             
             for worker in workers:
-                worker_status = await worker.get_status.remote()
+                worker_status = ray.get(worker.get_status.remote())
                 status["workers"].append(worker_status)
                 
                 if worker_status["available"]:
@@ -452,7 +452,7 @@ class WorkflowOrchestrator:
         return status
 
 # Convenience functions for easy usage
-async def start_conversation(user_input: str) -> tuple[str, ConversationState]:
+def start_conversation(user_input: str) -> tuple[str, ConversationState]:
     """
     Start a new conversation using the worker pool.
     
@@ -464,10 +464,10 @@ async def start_conversation(user_input: str) -> tuple[str, ConversationState]:
     """
     orchestrator = WorkflowOrchestrator()
     session_id = orchestrator.create_new_session()
-    final_state = await orchestrator.run_workflow(session_id, user_input)
+    final_state = orchestrator.run_workflow(session_id, user_input)
     return session_id, final_state
 
-async def continue_conversation(session_id: str, user_input: str) -> ConversationState:
+def continue_conversation(session_id: str, user_input: str) -> ConversationState:
     """
     Continue an existing conversation using the worker pool.
     
@@ -479,7 +479,7 @@ async def continue_conversation(session_id: str, user_input: str) -> Conversatio
         The final conversation state
     """
     orchestrator = WorkflowOrchestrator()
-    return await orchestrator.continue_workflow(session_id, user_input)
+    return orchestrator.continue_workflow(session_id, user_input)
 
 def get_conversation_history(session_id: str) -> list:
     """
