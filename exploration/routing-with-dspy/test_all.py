@@ -1,6 +1,7 @@
 import dspy
 from dotenv import load_dotenv
 import os
+import re
 import random
 import pandas as pd
 from typing import List, Dict, Tuple, Optional
@@ -11,6 +12,8 @@ from dataclasses import dataclass
 import time
 from langchain_openai import ChatOpenAI
 import warnings
+
+from query_set import training_prompts
 
 # Suppress noisy LiteLLM errors as discussed
 logging.getLogger("LiteLLM").setLevel(logging.CRITICAL)
@@ -223,105 +226,6 @@ class UnifiedMCPComparison:
         This uses the same comprehensive test data from the DSPy implementation.
         """
         
-        # Internet search queries
-        internet_queries = [
-            "What's the current weather in New York?",
-            "Find me the latest news about artificial intelligence", 
-            "Search for information about Python programming best practices",
-            "What are the top restaurants in San Francisco?",
-            "Look up the stock price of Apple",
-            "Find recent articles about machine learning",
-            "Search for tutorial on React development"
-        ]
-        
-        # GitHub queries
-        github_queries = [
-            "Show me my latest commits on the main branch in GitHub",
-            "List all open pull requests in the backend repository",
-            "Review pull request #102 from user_xyz", 
-            "Compare branches 'feature/new-ui' and 'develop' in GitHub",
-            "Find the commit history for the authentication module",
-            "Search for repositories related to machine learning",
-            "Show me issues labeled as 'bug' in the project"
-        ]
-        
-        # Atlassian/JIRA queries
-        atlassian_queries = [
-            "Create a new issue in Jira for bug tracking",
-            "Assign task PROJ-456 to me in the Jira project",
-            "Search for issues containing 'authentication failure' in Jira", 
-            "Update the priority of ticket PROJ-123 to high",
-            "Move issue to 'In Progress' status in our sprint",
-            "Find all tickets assigned to the backend team",
-            "Show me the burndown chart for current sprint"
-        ]
-        
-        # General AI queries
-        general_queries = [
-            "Explain quantum computing in simple terms",
-            "What is the capital of France?",
-            "Help me brainstorm ideas for a presentation",
-            "Tell me a random fact about space", 
-            "How do solar panels work?",
-            "What's the difference between AI and machine learning?",
-            "Summarize the concept of blockchain technology"
-        ]
-        
-        # Email assistant queries
-        email_queries = [
-            "Help me write a professional email to my boss",
-            "Draft an email to schedule a meeting with the team",
-            "Compose a follow-up email for the client proposal",
-            "Write an email declining a meeting invitation politely",
-            "Help me respond to this customer complaint email", 
-            "Draft a thank you email after the interview",
-            "Write an email requesting time off"
-        ]
-        
-        # Google Maps queries
-        maps_queries = [
-            "Find directions to the nearest coffee shop",
-            "What's the traffic like on Highway 101?",
-            "Show me restaurants near downtown Seattle",
-            "Find parking near the convention center",
-            "Get directions from home to the airport",
-            "Search for gas stations along my route", 
-            "Find hotels near Times Square"
-        ]
-        
-        # Knowledge base queries
-        knowledge_base_queries = [
-            "Search our knowledge base for user interaction patterns",
-            "Find information about customer feedback trends",
-            "Look up user engagement metrics in our database",
-            "Search for product usage analytics in our system",
-            "Find customer support ticket patterns",
-            "Look up user onboarding completion rates",
-            "Search for feature adoption metrics"
-        ]
-        
-        # SQLite database queries
-        sqlite_queries = [
-            "Query the Chinook database for sales data",
-            "Find all customers in the SQLite database from California", 
-            "Search the database for top-selling albums",
-            "Get employee information from the Chinook database",
-            "Find invoice totals by country in our SQLite DB",
-            "Query track information from the music database",
-            "Search for customer purchase history in Chinook"
-        ]
-        
-        # Ambiguous/unknown queries
-        unknown_queries = [
-            "Help me with this thing",
-            "Can you do something about the issue?",
-            "I need assistance with the problem",
-            "Fix this for me",
-            "Handle this request",
-            "Process this information",
-            "Deal with this situation"
-        ]
-        
         # Create labeled examples
         all_examples = []
         
@@ -334,15 +238,11 @@ class UnifiedMCPComparison:
                 all_examples.append(example)
         
         # Add all categories with their correct labels
-        add_examples(internet_queries, 'search_internet')
-        add_examples(github_queries, 'search_github')
-        add_examples(atlassian_queries, 'search_atlassian')
-        add_examples(general_queries, 'general_ai_response')
-        add_examples(email_queries, 'email_assistant')
-        add_examples(maps_queries, 'search_google_maps')
-        add_examples(knowledge_base_queries, 'search_knowledge_base')
-        add_examples(sqlite_queries, 'search_sqlite')
-        add_examples(unknown_queries, 'unknown')
+
+        for key in training_prompts:
+            matches = [dest for dest in MCPRouterConfig.VALID_DESTINATIONS if re.search(key.split('_q')[0], dest)]
+            print(matches)
+            add_examples(training_prompts[key], matches[0]) # this is bad code, fix me
         
         logger.info(f"Created {len(all_examples)} test examples for unified comparison")
         return all_examples
