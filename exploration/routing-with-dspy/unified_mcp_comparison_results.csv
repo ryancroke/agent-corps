@@ -1,0 +1,385 @@
+query,actual_destination,dspy_prediction,dspy_correct,dspy_response_time,zeroshot_prediction,zeroshot_correct,zeroshot_response_time,both_correct,both_wrong,dspy_better,zeroshot_better
+"Geocode 'Buckingham Palace, London'.",search_google_maps,search_google_maps,True,0.9198389053344727,search_google_maps,True,0.8168418407440186,True,False,False,False
+The project.,unknown,unknown,True,0.9254868030548096,unknown,True,0.30124902725219727,True,False,False,False
+Increase the stock quantity for product 'Mega Gadget' by 25 units.,search_sqlite,search_sqlite,True,1.0239040851593018,search_sqlite,True,0.5123074054718018,True,False,False,False
+Did I interact with the 'list_notifications' tool on GitHub today?,search_knowledge_base,search_github,False,0.7204899787902832,search_github,False,0.7133779525756836,False,True,False,False
+"Search for 'pharmacies' near 'Union Station, Washington D.C.'.",search_google_maps,search_google_maps,True,0.7225399017333984,search_google_maps,True,0.5080001354217529,True,False,False,False
+What was the address I used with the 'maps_reverse_geocode' tool on Friday?,search_knowledge_base,unknown,False,0.8496861457824707,search_google_maps,False,0.7347137928009033,False,True,False,False
+Best lasagna recipe.,search_internet,search_internet,True,1.2889978885650635,search_internet,True,0.4121990203857422,True,False,False,False
+"If I want to learn about astrophysics, where should I start?",general_ai_response,general_ai_response,True,1.0712459087371826,general_ai_response,True,0.6591300964355469,True,False,False,False
+Address this.,unknown,unknown,True,0.7213301658630371,unknown,True,0.38346385955810547,True,False,False,False
+Search my interaction history for the phrase 'API rate limits'.,search_knowledge_base,search_knowledge_base,True,0.6943490505218506,search_knowledge_base,True,0.8663120269775391,True,False,False,False
+Have I logged any 'business insights' using the SQLite MCP this quarter?,search_knowledge_base,search_sqlite,False,0.687079906463623,search_sqlite,False,0.6948411464691162,False,True,False,False
+Find repos matching 'data-visualization' sorted by stars.,search_github,search_github,True,0.8691868782043457,search_github,True,0.4098958969116211,True,False,False,False
+Write a therapy session transcript where the patient is the concept of Time.,general_ai_response,general_ai_response,True,0.7174630165100098,general_ai_response,True,0.5288739204406738,True,False,False,False
+Is there a Confluence page about 'Disaster Recovery Plan'?,search_atlassian,search_atlassian,True,0.7688488960266113,search_atlassian,True,0.7252821922302246,True,False,False,False
+"If dreams were an alternative energy source, how would we harvest them?",general_ai_response,general_ai_response,True,0.6414139270782471,general_ai_response,True,1.124946117401123,True,False,False,False
+Draft an email to a client to upsell a new service.,email_assistant,email_assistant,True,0.7705590724945068,email_assistant,True,0.4560067653656006,True,False,False,False
+Top-rated TV shows on Netflix.,search_internet,search_internet,True,0.5936529636383057,search_internet,True,0.3218080997467041,True,False,False,False
+Add a comment to issue #15 in 'my-org/mobile-app': 'I can take a look at this'.,search_github,search_github,True,0.7079348564147949,search_github,True,1.1773321628570557,True,False,False,False
+"If buildings had emotions, what would a skyscraper feel on a windy day?",general_ai_response,general_ai_response,True,0.8310239315032959,general_ai_response,True,0.3618922233581543,True,False,False,False
+What are some famous thought experiments in philosophy?,general_ai_response,general_ai_response,True,0.7864320278167725,general_ai_response,True,1.3890466690063477,True,False,False,False
+Remove order ID 808 from the database.,search_sqlite,search_sqlite,True,1.0302839279174805,search_sqlite,True,0.6846730709075928,True,False,False,False
+How do solar panels work?,general_ai_response,general_ai_response,True,0.8116497993469238,general_ai_response,True,0.44588327407836914,True,False,False,False
+Remove employee 'Tom Thumb' who has left the company.,search_sqlite,search_sqlite,True,1.2044010162353516,search_sqlite,True,0.6793398857116699,True,False,False,False
+"If mirrors are portals to another dimension, what's on the other side?",general_ai_response,general_ai_response,True,0.8559248447418213,general_ai_response,True,1.4622979164123535,True,False,False,False
+What was the result when I tried to 'describe-table UserSessions' in SQLite?,search_knowledge_base,search_sqlite,False,0.6897320747375488,search_sqlite,False,0.5059351921081543,False,True,False,False
+Imagine a world where emotions have colors that everyone can see. How would this change social interactions?,general_ai_response,general_ai_response,True,1.0094389915466309,general_ai_response,True,0.633124828338623,True,False,False,False
+How to approach this?,unknown,unknown,True,0.5123956203460693,unknown,True,0.6115031242370605,True,False,False,False
+What is the history of the internet?,general_ai_response,general_ai_response,True,1.2289209365844727,general_ai_response,True,0.4916379451751709,True,False,False,False
+"Reverse geocode 48.8584° N, 2.2945° E.",search_google_maps,search_google_maps,True,0.7348060607910156,search_google_maps,True,0.6175119876861572,True,False,False,False
+I need assistance with the problem.,unknown,unknown,True,0.8375539779663086,unknown,True,0.5946857929229736,True,False,False,False
+Write a love letter from an electron to a proton.,general_ai_response,general_ai_response,True,0.924130916595459,general_ai_response,True,0.7138891220092773,True,False,False,False
+Draft an email to ask for a LinkedIn connection with a personalized message.,email_assistant,email_assistant,True,0.8066020011901855,email_assistant,True,0.6009838581085205,True,False,False,False
+What are the main causes of climate change?,general_ai_response,general_ai_response,True,0.843264102935791,general_ai_response,True,2.378734827041626,True,False,False,False
+What if cats were the dominant species on Earth?,general_ai_response,general_ai_response,True,1.0550768375396729,general_ai_response,True,0.5308003425598145,True,False,False,False
+Help me write an email to inquire about partnership opportunities.,email_assistant,email_assistant,True,1.2616090774536133,email_assistant,True,0.7149951457977295,True,False,False,False
+Create a new private repository named 'project-ares' in 'my-org' with a README.,search_github,search_github,True,1.377234935760498,search_github,True,0.4891049861907959,True,False,False,False
+Find my question about 'GitHub user search for 'data_expert''.,search_knowledge_base,search_github,False,0.7108891010284424,search_github,False,0.7790300846099854,False,True,False,False
+What if humans could communicate with plants by singing to them?,general_ai_response,general_ai_response,True,0.7957837581634521,general_ai_response,True,0.337130069732666,True,False,False,False
+Elevation at Pikes Peak summit.,search_google_maps,search_internet,False,1.0720131397247314,search_google_maps,True,0.5824639797210693,False,False,False,True
+Current air quality in Los Angeles.,search_internet,search_internet,True,1.1980040073394775,search_internet,True,0.4397549629211426,True,False,False,False
+"If you could get a Ph.D. in any fictional subject, what would it be?",general_ai_response,general_ai_response,True,1.3370590209960938,general_ai_response,True,0.5842969417572021,True,False,False,False
+Give me five anachronisms in the movie 'Braveheart'.,general_ai_response,general_ai_response,True,1.054556131362915,general_ai_response,True,0.4991648197174072,True,False,False,False
+What's the altitude of the Dead Sea shore?,search_google_maps,search_internet,False,0.9334592819213867,general_ai_response,False,0.564939022064209,False,True,False,False
+Who am I authenticated as on GitHub?,search_github,search_github,True,0.7050418853759766,search_github,True,0.35344409942626953,True,False,False,False
+Dismiss notification thread 'thread_abc123' by marking it as read.,search_github,unknown,False,0.627648115158081,unknown,False,0.4517860412597656,False,True,False,False
+"Search for 'movie theaters' around 'Leicester Square, London'.",search_google_maps,search_google_maps,True,0.7766478061676025,search_google_maps,True,0.7806322574615479,True,False,False,False
+What's the rating for 'Golden Gate Bridge'?,search_google_maps,search_google_maps,True,0.4229288101196289,search_google_maps,True,0.3459799289703369,True,False,False,False
+Directions to 'Grand Canyon South Rim' from 'Las Vegas'.,search_google_maps,search_google_maps,True,0.6724658012390137,search_google_maps,True,0.33472204208374023,True,False,False,False
+Memo: The churn rate is lowest among customers who have been with us for more than two years.,search_sqlite,unknown,False,0.6939318180084229,search_knowledge_base,False,0.7811281681060791,False,True,False,False
+List products that are currently out of stock.,search_sqlite,search_sqlite,True,0.6655800342559814,search_sqlite,True,0.5925841331481934,True,False,False,False
+How would the world be different if water had memory?,general_ai_response,general_ai_response,True,1.058704137802124,general_ai_response,True,0.8171310424804688,True,False,False,False
+Did I recently query the 'Customers' table in our SQLite database?,search_knowledge_base,search_knowledge_base,True,0.7227821350097656,search_sqlite,False,0.6963458061218262,False,False,True,False
+What if the Roman Empire never fell?,general_ai_response,general_ai_response,True,0.7580418586730957,general_ai_response,True,0.5883750915527344,True,False,False,False
+Find my previous requests to the internet search MCP about 'latest AI research'.,search_knowledge_base,search_knowledge_base,True,1.1747241020202637,unknown,False,0.5168523788452148,False,False,True,False
+What's my current GitHub username and email?,search_github,unknown,False,0.8600499629974365,unknown,False,0.4407768249511719,False,True,False,False
+Explain the rules of chess to someone who has never played.,general_ai_response,general_ai_response,True,0.5958316326141357,general_ai_response,True,0.5572412014007568,True,False,False,False
+What was the SQL query when I was looking for 'top 5 selling products'?,search_knowledge_base,search_sqlite,False,0.6525650024414062,search_sqlite,False,0.33239078521728516,False,True,False,False
+What about that?,unknown,unknown,True,0.6063013076782227,unknown,True,0.45566391944885254,True,False,False,False
+"Define a table called 'Tasks' having fields: TaskID, ProjectID, Description, DueDate, Status.",search_sqlite,search_sqlite,True,3.353498935699463,search_sqlite,True,0.4204559326171875,True,False,False,False
+"Update 'README.md' in 'my-org/my-tool' branch 'docs-update', message 'Improve installation instructions', new content here.",search_github,search_github,True,0.8258428573608398,search_github,True,0.812129020690918,True,False,False,False
+"If the days of the week had personalities, what would Wednesday be like?",general_ai_response,general_ai_response,True,12.021764039993286,general_ai_response,True,0.7091689109802246,True,False,False,False
+"If music could be tasted, what would your favorite genre taste like?",general_ai_response,general_ai_response,True,8.647547245025635,general_ai_response,True,0.9623618125915527,True,False,False,False
+What's the total count of documents in my 'MapsUsage' collection?,search_knowledge_base,search_sqlite,False,3.027244806289673,search_knowledge_base,True,0.656073808670044,False,False,False,True
+Get products where the stock quantity is below 20 units.,search_sqlite,search_sqlite,True,0.9178659915924072,search_sqlite,True,0.7293713092803955,True,False,False,False
+What were the details of my request to create a GitHub repository named 'MyTestProject'?,search_knowledge_base,search_github,False,1.2440850734710693,search_github,False,0.5159022808074951,False,True,False,False
+Did I ask about 'deleting documents from a Chroma collection' before?,search_knowledge_base,search_knowledge_base,True,1.0075578689575195,search_knowledge_base,True,0.4723072052001953,True,False,False,False
+"If emotions were a form of weather, what would 'anticipation' be like?",general_ai_response,general_ai_response,True,0.8232359886169434,general_ai_response,True,0.7599141597747803,True,False,False,False
+Update the email address for customer ID 303 to 'new.email@example.com'.,search_sqlite,search_sqlite,True,0.8876307010650635,search_sqlite,True,0.6575610637664795,True,False,False,False
+"Show me all merged pull requests for 'my-org/data-services' from the last week, 10 per page.",search_github,search_github,True,1.2557520866394043,search_github,True,0.580327033996582,True,False,False,False
+Mark PR #40 in 'my-org/onboarding-flow' as ready for review.,search_github,search_github,True,0.8074369430541992,search_github,True,0.9621589183807373,True,False,False,False
+Update issue 'PROJ-456': set priority to 'High' and add label 'critical'.,search_atlassian,search_atlassian,True,0.8972229957580566,search_atlassian,True,0.5536539554595947,True,False,False,False
+Give me some guidance.,unknown,unknown,True,1.0296268463134766,unknown,True,0.5295109748840332,True,False,False,False
+What if all graffiti was sentient and could comment on passersby?,general_ai_response,general_ai_response,True,0.9586770534515381,general_ai_response,True,0.5208299160003662,True,False,False,False
+"If the planets in our solar system had a group chat, what would they talk about?",general_ai_response,general_ai_response,True,0.6522750854492188,general_ai_response,True,0.6405739784240723,True,False,False,False
+"What is the address for 37.7749° N, 122.4194° W?",search_google_maps,search_google_maps,True,1.2740857601165771,search_google_maps,True,0.4053361415863037,True,False,False,False
+How do solar panels work?,search_internet,general_ai_response,False,0.003412961959838867,general_ai_response,False,0.3706190586090088,False,True,False,False
+What are the potential benefits and risks of asteroid mining?,general_ai_response,general_ai_response,True,0.6793537139892578,general_ai_response,True,0.3056318759918213,True,False,False,False
+Are air fryers worth it?,search_internet,general_ai_response,False,2.1556239128112793,general_ai_response,False,0.4910130500793457,False,True,False,False
+"Write an email to a client who has overdue payments, gently reminding them.",email_assistant,email_assistant,True,0.7228972911834717,email_assistant,True,0.3600809574127197,True,False,False,False
+Write a script for a puppet show about quantum entanglement.,general_ai_response,general_ai_response,True,0.8496799468994141,general_ai_response,True,0.8638992309570312,True,False,False,False
+"Request changes on PR #58 in 'my-org/new-module', body: 'Needs more test coverage for edge cases.'",search_github,search_github,True,1.0035209655761719,search_github,True,0.720350980758667,True,False,False,False
+List all issues in the 'QAServer' project.,search_atlassian,search_atlassian,True,1.0022671222686768,search_atlassian,True,0.7249720096588135,True,False,False,False
+Write a news article about the first successful teleportation of a pizza.,general_ai_response,general_ai_response,True,0.9096460342407227,general_ai_response,True,0.5655179023742676,True,False,False,False
+What are the child pages of 'System Architecture Overview' in Confluence?,search_atlassian,search_atlassian,True,0.7761852741241455,search_atlassian,True,0.6102199554443359,True,False,False,False
+What's the plan?,unknown,unknown,True,0.7869269847869873,unknown,True,0.5449750423431396,True,False,False,False
+"If you could add an extra hour to your day, but it had to be spent doing something completely useless, what would you do?",general_ai_response,general_ai_response,True,0.6293890476226807,general_ai_response,True,0.6569762229919434,True,False,False,False
+Write a monologue from the perspective of the last payphone on Earth.,general_ai_response,general_ai_response,True,1.6287767887115479,general_ai_response,True,0.6738438606262207,True,False,False,False
+Help me write an email to a conference organizer about speaking opportunities.,email_assistant,email_assistant,True,0.6813421249389648,email_assistant,True,0.30788087844848633,True,False,False,False
+What if our inner monologues were narrated by famous voice actors?,general_ai_response,general_ai_response,True,0.7671480178833008,general_ai_response,True,0.3467237949371338,True,False,False,False
+I need to send an email to confirm a reservation.,email_assistant,email_assistant,True,0.7710151672363281,email_assistant,True,0.6373987197875977,True,False,False,False
+Show me the comments on issue #55 in 'my-org/frontend-app'.,search_github,search_github,True,1.2193982601165771,search_github,True,1.161633014678955,True,False,False,False
+Update the title of PR #90 in 'my-org/scripting-tools' to 'Feat: Add new utility script for CSV parsing'.,search_github,search_github,True,0.6985321044921875,search_github,True,1.3506062030792236,True,False,False,False
+Add a worklog of 4h to 'RESEARCH-600' for 'Initial investigation'.,search_atlassian,search_atlassian,True,1.0443310737609863,search_atlassian,True,0.7381980419158936,True,False,False,False
+I need to compose an email to thank a speaker for their presentation.,email_assistant,email_assistant,True,0.8507788181304932,email_assistant,True,0.7356839179992676,True,False,False,False
+Write a list of rules for a society of sentient garden gnomes.,general_ai_response,general_ai_response,True,0.5983419418334961,general_ai_response,True,0.5204641819000244,True,False,False,False
+Compose an email to express condolences.,email_assistant,email_assistant,True,0.8264591693878174,email_assistant,True,0.6071348190307617,True,False,False,False
+How far is it to walk from 'my hotel' to 'the beach' and to 'the main street'?,search_google_maps,search_google_maps,True,1.1017439365386963,search_google_maps,True,0.5292448997497559,True,False,False,False
+Describe an emotion that doesn't currently have a name in English.,general_ai_response,general_ai_response,True,0.9879879951477051,general_ai_response,True,0.7233672142028809,True,False,False,False
+Give me a route from 'LAX' to 'Santa Monica Pier'.,search_google_maps,search_google_maps,True,1.2314441204071045,search_google_maps,True,0.6623191833496094,True,False,False,False
+"If you could design a new educational system, what would it look like?",general_ai_response,general_ai_response,True,1.405987024307251,general_ai_response,True,0.6451807022094727,True,False,False,False
+What's the price of a Tesla Model Y?,search_internet,search_internet,True,0.8464980125427246,search_internet,True,0.5318319797515869,True,False,False,False
+What about this data?,unknown,unknown,True,3.7322471141815186,unknown,True,0.7745547294616699,True,False,False,False
+How to write a resume?,search_internet,general_ai_response,False,0.9449129104614258,general_ai_response,False,0.4113430976867676,False,True,False,False
+List the active and future sprints for the 'Data Science Team' board.,search_atlassian,search_atlassian,True,1.0205929279327393,search_atlassian,True,0.30617499351501465,True,False,False,False
+How long would it take to drive from 'London' to 'Paris' and also from 'London' to 'Brussels'?,search_google_maps,search_google_maps,True,0.6747889518737793,search_google_maps,True,0.6949787139892578,True,False,False,False
+What if laughter was a form of currency?,general_ai_response,general_ai_response,True,0.8140549659729004,general_ai_response,True,0.586143970489502,True,False,False,False
+Update me.,unknown,unknown,True,1.0674700736999512,unknown,True,0.3041090965270996,True,False,False,False
+Write a modern version of a classic fairy tale.,general_ai_response,general_ai_response,True,0.6688618659973145,general_ai_response,True,0.2542431354522705,True,False,False,False
+What are the possible next steps for issue 'FEATURE-200'?,search_atlassian,search_atlassian,True,0.685513973236084,search_atlassian,True,1.4274611473083496,True,False,False,False
+Draft an email to decline an invitation to a social event.,email_assistant,email_assistant,True,0.7843778133392334,email_assistant,True,0.6531860828399658,True,False,False,False
+What's the latest version of the 'CustomerPortal' project?,search_atlassian,search_atlassian,True,0.7172050476074219,search_github,False,0.6273300647735596,False,False,True,False
+Make it work.,unknown,unknown,True,0.6910316944122314,unknown,True,0.3938021659851074,True,False,False,False
+I need to compose an email to update stakeholders on project status.,email_assistant,email_assistant,True,0.7593400478363037,email_assistant,True,0.5546131134033203,True,False,False,False
+Write a dramatic monologue from the perspective of a forgotten houseplant.,general_ai_response,general_ai_response,True,0.7309799194335938,general_ai_response,True,0.6115353107452393,True,False,False,False
+What fields are in the 'Invoices' table?,search_sqlite,search_sqlite,True,0.7331089973449707,search_sqlite,True,0.2619509696960449,True,False,False,False
+Design a new global currency based on acts of kindness.,general_ai_response,general_ai_response,True,0.7283682823181152,general_ai_response,True,1.4077517986297607,True,False,False,False
+Write an email to ask for a sponsorship for a charity event.,email_assistant,email_assistant,True,0.6304850578308105,email_assistant,True,0.5907189846038818,True,False,False,False
+"What if stars were actually holes in the fabric of night, showing the light from another dimension?",general_ai_response,general_ai_response,True,0.7494320869445801,general_ai_response,True,0.659174919128418,True,False,False,False
+Draft an email to share a press release with media contacts.,email_assistant,email_assistant,True,0.6831619739532471,email_assistant,True,0.5095939636230469,True,False,False,False
+Organize this.,unknown,unknown,True,0.7325050830841064,unknown,True,0.6063849925994873,True,False,False,False
+Fun facts about dolphins.,search_internet,general_ai_response,False,1.338320016860962,general_ai_response,False,0.6846730709075928,False,True,False,False
+"Display products sorted by their price, from highest to lowest.",search_sqlite,search_sqlite,True,1.1985797882080078,search_sqlite,True,0.3285040855407715,True,False,False,False
+Write an owner's manual for a human being.,general_ai_response,general_ai_response,True,0.8371410369873047,general_ai_response,True,0.5823879241943359,True,False,False,False
+Make a branch 'hotfix/ui-glitch' in 'my-org/customer-portal' based on the 'main' branch's latest commit.,search_github,search_github,True,0.697429895401001,search_github,True,0.44368624687194824,True,False,False,False
+Calculate the average order value.,search_sqlite,search_sqlite,True,0.7960000038146973,general_ai_response,False,0.40944504737854004,False,False,True,False
+Change the department of employee ID 10 to 'Marketing'.,search_sqlite,search_sqlite,True,0.7509610652923584,search_sqlite,True,0.3308260440826416,True,False,False,False
+Can you fetch my GitHub profile info?,search_github,search_github,True,0.8299980163574219,search_github,True,0.31494617462158203,True,False,False,False
+Show me my conversation history regarding 'database migration planning'.,search_knowledge_base,search_knowledge_base,True,0.9555530548095703,search_knowledge_base,True,0.34917688369750977,True,False,False,False
+Which employees are in the 'Sales' department?,search_sqlite,search_sqlite,True,0.7077953815460205,search_sqlite,True,0.5592730045318604,True,False,False,False
+Write a compelling argument for why sand is actually tiny rocks.,general_ai_response,general_ai_response,True,0.7136321067810059,general_ai_response,True,0.27147698402404785,True,False,False,False
+"If you could invent a new holiday, what would it celebrate?",general_ai_response,general_ai_response,True,0.6419529914855957,general_ai_response,True,1.0065569877624512,True,False,False,False
+This isn't right.,unknown,unknown,True,0.676245927810669,unknown,True,0.5316190719604492,True,False,False,False
+Did I request 'walking directions' to a place called 'Central Perk'?,search_knowledge_base,search_google_maps,False,0.618574857711792,search_google_maps,False,1.0375392436981201,False,True,False,False
+Find Jira issues with the label 'needs-documentation' and check if a Confluence page is linked.,search_atlassian,search_atlassian,True,0.8181338310241699,search_atlassian,True,0.5089190006256104,True,False,False,False
+Help me brainstorm ideas for a presentation on renewable energy.,general_ai_response,general_ai_response,True,0.6889228820800781,general_ai_response,True,0.5609140396118164,True,False,False,False
+Compose a symphony that represents the entirety of human history.,general_ai_response,general_ai_response,True,0.6457648277282715,unknown,False,0.582456111907959,False,False,True,False
+Are there any Jira tasks due this week for the 'UX Team'?,search_atlassian,search_atlassian,True,0.8279101848602295,search_atlassian,True,0.44191789627075195,True,False,False,False
+Write a script for a nature documentary about the common house dust bunny.,general_ai_response,general_ai_response,True,0.9691867828369141,general_ai_response,True,0.4916388988494873,True,False,False,False
+"Write a recipe for disaster (literally, what ingredients make things go wrong?).",general_ai_response,general_ai_response,True,0.634606122970581,general_ai_response,True,0.6467599868774414,True,False,False,False
+Tell me a secret about the universe (can be fictional).,general_ai_response,general_ai_response,True,0.6620111465454102,general_ai_response,True,0.3751060962677002,True,False,False,False
+Expand on that.,unknown,unknown,True,0.7333731651306152,unknown,True,0.5066642761230469,True,False,False,False
+Create a workout plan for a beginner.,general_ai_response,general_ai_response,True,0.759876012802124,general_ai_response,True,0.7782251834869385,True,False,False,False
+Help me write an email to a government official.,email_assistant,email_assistant,True,0.6876130104064941,email_assistant,True,0.5440030097961426,True,False,False,False
+What is the total revenue for Q1?,search_sqlite,unknown,False,0.9245777130126953,unknown,False,0.4545412063598633,False,True,False,False
+Good sources of vitamin D.,search_internet,general_ai_response,False,0.9595949649810791,general_ai_response,False,0.46219921112060547,False,True,False,False
+Comment on 'FEATURE-303' that 'This looks good to merge'.,search_atlassian,search_atlassian,True,1.3093969821929932,search_atlassian,True,0.7001140117645264,True,False,False,False
+Fetch the approval status for pull request 99 in 'my-org/config-files'.,search_github,search_github,True,0.8611950874328613,search_github,True,0.3952980041503906,True,False,False,False
+Update employee 'Eve Adams' salary to 75000.,search_sqlite,search_sqlite,True,0.8870000839233398,search_sqlite,True,0.4616990089416504,True,False,False,False
+Create a 'relates to' link between 'DOC-50' and 'CODE-75'.,search_atlassian,search_atlassian,True,0.6290309429168701,search_atlassian,True,0.5787789821624756,True,False,False,False
+"Record a new order for customer ID 101, product ID 202, quantity 2.",search_sqlite,search_sqlite,True,0.9060680866241455,search_sqlite,True,0.5432422161102295,True,False,False,False
+Change the description for 'TASK-222' to 'Updated requirements as per meeting'.,search_atlassian,search_atlassian,True,0.6539130210876465,search_atlassian,True,0.3699193000793457,True,False,False,False
+Develop a new form of government based on algorithms.,general_ai_response,general_ai_response,True,0.9243159294128418,general_ai_response,True,0.6062099933624268,True,False,False,False
+Generate a list of names for a pet rock.,general_ai_response,general_ai_response,True,0.7483410835266113,general_ai_response,True,1.9975581169128418,True,False,False,False
+Travel advisories for Mexico.,search_internet,search_internet,True,0.6911990642547607,search_internet,True,0.661888837814331,True,False,False,False
+What is the capital of Australia?,search_internet,search_internet,True,0.6854419708251953,general_ai_response,False,0.7543609142303467,False,False,True,False
+Note for the team: There's a strong correlation between website traffic from social media and new sign-ups.,search_sqlite,email_assistant,False,0.8210439682006836,unknown,False,0.30369997024536133,False,True,False,False
+Write a children's story about a cloud who is afraid of heights.,general_ai_response,general_ai_response,True,1.238476037979126,general_ai_response,True,0.604241132736206,True,False,False,False
+Remind me about the Jira search I performed for 'issues labeled critical in project Alpha'.,search_knowledge_base,search_atlassian,False,0.8211071491241455,search_atlassian,False,0.37196993827819824,False,True,False,False
+I have a question.,unknown,unknown,True,0.9635238647460938,unknown,True,0.6096792221069336,True,False,False,False
+How would language evolve if we communicated primarily through emojis?,general_ai_response,general_ai_response,True,0.7923612594604492,general_ai_response,True,0.4041590690612793,True,False,False,False
+Find a solution.,unknown,unknown,True,0.6487541198730469,unknown,True,1.7440879344940186,True,False,False,False
+Get details for place ID 'ChIJN1t_tDeuEmsRUsoyG83frY4'.,search_google_maps,search_google_maps,True,1.9840457439422607,search_google_maps,True,0.5678451061248779,True,False,False,False
+Look up a GitHub user named 'jane-doe-dev'.,search_github,search_github,True,8.400958061218262,search_github,True,0.6165239810943604,True,False,False,False
+Biography of Marie Curie.,search_internet,search_internet,True,1.2712650299072266,search_internet,True,0.771237850189209,True,False,False,False
+Move issue 'DEV-111' to 'In Progress'.,search_atlassian,search_atlassian,True,0.8217921257019043,search_atlassian,True,0.5085749626159668,True,False,False,False
+What if all conspiracy theories were suddenly proven true for 24 hours?,general_ai_response,general_ai_response,True,0.8374829292297363,general_ai_response,True,0.47765183448791504,True,False,False,False
+Did I ever ask about commit SH324GH in GitHub?,search_knowledge_base,search_github,False,1.328989028930664,search_github,False,0.258742094039917,False,True,False,False
+What fields can I use to search for issues in Jira?,search_atlassian,search_atlassian,True,1.299644947052002,search_atlassian,True,0.7117960453033447,True,False,False,False
+Remind me about the SQL query I ran to find 'customers from London'.,search_knowledge_base,search_sqlite,False,0.5502259731292725,search_sqlite,False,0.8085870742797852,False,True,False,False
+Compose an email to congratulate someone on a new book release.,email_assistant,email_assistant,True,1.0000591278076172,email_assistant,True,0.7505979537963867,True,False,False,False
+"How is artificial intelligence portrayed in science fiction, and how does it compare to reality?",general_ai_response,general_ai_response,True,0.7837293148040771,general_ai_response,True,0.8976876735687256,True,False,False,False
+Transit directions to 'Yankee Stadium' for a game tonight.,search_google_maps,search_google_maps,True,0.8617150783538818,search_google_maps,True,0.5967428684234619,True,False,False,False
+"If you could rewrite the ending of any famous movie, which one and how?",general_ai_response,general_ai_response,True,1.0989391803741455,general_ai_response,True,0.6467640399932861,True,False,False,False
+What context did I provide when I searched for 'machine learning repositories' on GitHub?,search_knowledge_base,search_github,False,0.7459399700164795,search_github,False,0.8967580795288086,False,True,False,False
+What tables exist in this database?,search_sqlite,search_sqlite,True,0.809391975402832,search_sqlite,True,0.3627488613128662,True,False,False,False
+I need to compose an email to confirm attendance at an event.,email_assistant,email_assistant,True,0.653447151184082,email_assistant,True,0.6019039154052734,True,False,False,False
+Best way to learn Python programming?,search_internet,general_ai_response,False,1.01234769821167,general_ai_response,False,0.4057729244232178,False,True,False,False
+"If dreams were movies, who would be the highest-grossing director in your dreamscape?",general_ai_response,general_ai_response,True,0.6921021938323975,unknown,False,0.5703299045562744,False,False,True,False
+How do optical illusions trick our brains?,general_ai_response,general_ai_response,True,1.0294511318206787,general_ai_response,True,0.31262683868408203,True,False,False,False
+Tell me a completely new fairytale.,general_ai_response,general_ai_response,True,0.7112991809844971,general_ai_response,True,0.4058349132537842,True,False,False,False
+"If every book had a soundtrack, what would be the main theme for 'Moby Dick'?",general_ai_response,general_ai_response,True,0.7204558849334717,general_ai_response,True,0.7115511894226074,True,False,False,False
+Who discovered penicillin?,search_internet,general_ai_response,False,0.852471113204956,general_ai_response,False,0.8900570869445801,False,True,False,False
+Describe an alien sport that would be impossible for humans to play.,general_ai_response,general_ai_response,True,0.7304530143737793,general_ai_response,True,0.3939850330352783,True,False,False,False
+What if our dreams are just advertisements from other dimensions?,general_ai_response,general_ai_response,True,0.6963798999786377,unknown,False,0.3785841464996338,False,False,True,False
+I need information.,unknown,unknown,True,0.9782509803771973,unknown,True,0.6822588443756104,True,False,False,False
+What is the elevation at the summit of Mount Kilimanjaro?,search_google_maps,search_internet,False,0.8073439598083496,general_ai_response,False,0.4509611129760742,False,True,False,False
+What are the reviews on PR #70 in 'my-org/security-patches'?,search_github,search_github,True,1.0275650024414062,search_github,True,0.4062221050262451,True,False,False,False
+What if memories had a scent?,general_ai_response,general_ai_response,True,1.0131371021270752,general_ai_response,True,0.42060208320617676,True,False,False,False
+"Provide a distance matrix for origins 'SFO Airport', 'Oakland Airport' and destinations 'Downtown SF', 'Palo Alto' using transit.",search_google_maps,search_google_maps,True,0.7194337844848633,search_google_maps,True,0.7153186798095703,True,False,False,False
+"If dreams had their own stock market, what would be the most volatile 'dream commodity'?",general_ai_response,general_ai_response,True,0.8208119869232178,general_ai_response,True,0.9185051918029785,True,False,False,False
+Remind me.,unknown,unknown,True,0.8215541839599609,unknown,True,0.6128733158111572,True,False,False,False
+Write a detective story where the detective is a sentient houseplant.,general_ai_response,general_ai_response,True,0.9227018356323242,general_ai_response,True,0.6115109920501709,True,False,False,False
+Show me the opening hours for 'The Metropolitan Museum of Art'.,search_google_maps,search_google_maps,True,0.6637649536132812,search_google_maps,True,0.565622091293335,True,False,False,False
+Log a bug for 'my-org/api' with the title 'Null pointer exception on /users endpoint' and assign it to 'dev-lead'.,search_github,search_atlassian,False,1.1287908554077148,search_atlassian,False,1.0214929580688477,False,True,False,False
+"Find coordinates for 'The Great Wall of China, Mutianyu section'.",search_google_maps,search_google_maps,True,0.8248188495635986,search_google_maps,True,0.5347089767456055,True,False,False,False
+"What if silence actually made a distinct sound, but most people have tuned it out?",general_ai_response,general_ai_response,True,0.9970691204071045,general_ai_response,True,1.3264350891113281,True,False,False,False
+What if time was a tangible currency you could spend or save?,general_ai_response,general_ai_response,True,0.9596672058105469,general_ai_response,True,1.0162529945373535,True,False,False,False
+Imagine an algorithm that can predict your next thought. Would you want to know it?,general_ai_response,general_ai_response,True,0.9410808086395264,general_ai_response,True,0.4110381603240967,True,False,False,False
+What if thoughts were visible as colorful clouds above people's heads?,general_ai_response,general_ai_response,True,0.817194938659668,unknown,False,0.45038390159606934,False,False,True,False
+Write an email to confirm shipment of an order.,email_assistant,email_assistant,True,0.8412432670593262,email_assistant,True,0.3706388473510742,True,False,False,False
+"Describe a planet where it rains tiny, harmless spiders twice a day.",general_ai_response,general_ai_response,True,0.7380709648132324,general_ai_response,True,0.42307209968566895,True,False,False,False
+"What if the moon was actually made of cheese, but it was a really, really bland type of cheese?",general_ai_response,general_ai_response,True,0.820136308670044,general_ai_response,True,0.9196741580963135,True,False,False,False
+"If procrastination was an Olympic sport, what would the events be?",general_ai_response,general_ai_response,True,1.1303770542144775,general_ai_response,True,0.506587028503418,True,False,False,False
+"Create a new table named 'Projects' with columns: ProjectID (integer, primary key), ProjectName (text), StartDate (date), Budget (real).",search_sqlite,search_sqlite,True,0.9263319969177246,search_sqlite,True,0.5065319538116455,True,False,False,False
+Draft an email to a recruiter expressing interest in a role.,email_assistant,email_assistant,True,1.0269238948822021,email_assistant,True,0.6137852668762207,True,False,False,False
+What are some common logical fallacies?,general_ai_response,general_ai_response,True,1.4926528930664062,general_ai_response,True,0.6571760177612305,True,False,False,False
+What are the ethics of creating sentient AI?,general_ai_response,general_ai_response,True,0.7212221622467041,general_ai_response,True,0.5080149173736572,True,False,False,False
+"If you were to write an autobiography, what would the first chapter be about (as an AI)?",general_ai_response,general_ai_response,True,0.8005130290985107,general_ai_response,True,0.8383522033691406,True,False,False,False
+Write an email to a travel agency to plan a vacation.,email_assistant,email_assistant,True,1.2322990894317627,email_assistant,True,0.7129578590393066,True,False,False,False
+Write a proposal for a reality TV show set on the International Space Station.,general_ai_response,general_ai_response,True,1.249176025390625,general_ai_response,True,0.38889122009277344,True,False,False,False
+Explain the architecture of the Great Pyramid of Giza.,general_ai_response,general_ai_response,True,0.7837529182434082,general_ai_response,True,0.4739799499511719,True,False,False,False
+Show me the available transitions for ticket 'BUG-902'.,search_atlassian,search_atlassian,True,1.7141902446746826,search_atlassian,True,1.1847538948059082,True,False,False,False
+How does a 3D printer work?,general_ai_response,general_ai_response,True,2.2974729537963867,general_ai_response,True,0.5894620418548584,True,False,False,False
+I need a strategy.,unknown,unknown,True,0.9081132411956787,unknown,True,0.6941001415252686,True,False,False,False
+Walking directions from my current location to 'Eiffel Tower'.,search_google_maps,search_google_maps,True,0.792377233505249,search_google_maps,True,0.47173404693603516,True,False,False,False
+Start the next sprint for the 'Backend Team' board.,search_atlassian,search_atlassian,True,0.7547791004180908,search_atlassian,True,0.7006189823150635,True,False,False,False
+Let's try something.,unknown,unknown,True,1.0284252166748047,unknown,True,0.8157370090484619,True,False,False,False
+Did I ever ask about 'deleting a Confluence page' titled 'Draft Notes'?,search_knowledge_base,search_knowledge_base,True,0.9245009422302246,search_atlassian,False,0.4864339828491211,False,False,True,False
+Write a poem that can only be understood if read backwards.,general_ai_response,general_ai_response,True,0.7421798706054688,general_ai_response,True,0.9542231559753418,True,False,False,False
+Explain that.,unknown,unknown,True,0.6858532428741455,unknown,True,0.7102658748626709,True,False,False,False
+Define 'ephemeral'.,search_internet,general_ai_response,False,0.7019729614257812,general_ai_response,False,0.6311221122741699,False,True,False,False
+What internet searches did I perform related to 'travel to Japan'?,search_knowledge_base,unknown,False,0.7531840801239014,unknown,False,0.268657922744751,False,True,False,False
+Find interactions where I asked about 'creating a Jira sprint'.,search_knowledge_base,search_knowledge_base,True,0.9385480880737305,search_knowledge_base,True,0.6929616928100586,True,False,False,False
+Find the GitHub user 'octocat'.,search_github,search_github,True,0.7295560836791992,search_github,True,0.7116189002990723,True,False,False,False
+Next step?,unknown,unknown,True,0.7218120098114014,unknown,True,0.5675928592681885,True,False,False,False
+What's the total amount spent by customer ID 56?,search_sqlite,search_sqlite,True,1.1742808818817139,search_sqlite,True,0.32398200035095215,True,False,False,False
+"Get directions from '1 Infinite Loop, Cupertino, CA' to 'San Francisco International Airport'.",search_google_maps,search_google_maps,True,1.9254558086395264,search_google_maps,True,0.4070889949798584,True,False,False,False
+Search Confluence for 'API Documentation for Payment Gateway'.,search_atlassian,search_atlassian,True,0.9254319667816162,search_atlassian,True,0.7503979206085205,True,False,False,False
+What if thoughts could be composted and used to grow new ideas?,general_ai_response,general_ai_response,True,0.9097161293029785,unknown,False,0.6000518798828125,False,False,True,False
+"If different cloud types were different types of bread, what would a cirrus cloud be?",general_ai_response,general_ai_response,True,0.6638693809509277,general_ai_response,True,0.4865739345550537,True,False,False,False
+"What if we discovered that plants are more intelligent than humans, just very slow?",general_ai_response,general_ai_response,True,0.6847701072692871,general_ai_response,True,0.5234198570251465,True,False,False,False
+Write an instruction manual for falling in love.,general_ai_response,general_ai_response,True,1.2165307998657227,general_ai_response,True,0.6971831321716309,True,False,False,False
+What was my most recent query to the 'atlassian_queries' MCP?,search_knowledge_base,unknown,False,0.942302942276001,search_atlassian,False,0.5086991786956787,False,True,False,False
+Log the discovery: A/B test on the landing page showed version B performed 12% better.,search_sqlite,search_knowledge_base,False,1.2247591018676758,unknown,False,0.45248889923095703,False,True,False,False
+Tell me the height of Mount McKinley (Denali).,search_google_maps,search_internet,False,0.7239868640899658,general_ai_response,False,0.9772360324859619,False,True,False,False
+Did I try to get details for a GitHub issue #77 in the 'frontend-framework' repo?,search_knowledge_base,search_github,False,1.612645149230957,search_github,False,1.151939868927002,False,True,False,False
+Write an email requesting time off,email_assistant,email_assistant,True,0.7218689918518066,email_assistant,True,0.3554248809814453,True,False,False,False
+Add the label 'architecture' to the 'System Diagram V3' Confluence page.,search_atlassian,search_atlassian,True,0.8723537921905518,search_atlassian,True,0.32259202003479004,True,False,False,False
+Draft an email to ask for clarification on a task.,email_assistant,email_assistant,True,1.3088979721069336,email_assistant,True,0.4135618209838867,True,False,False,False
+How many countries are in the European Union?,search_internet,search_internet,True,1.1285529136657715,general_ai_response,False,2.1512269973754883,False,False,True,False
+Describe a new fundamental force of nature and its effects.,general_ai_response,general_ai_response,True,4.914729118347168,general_ai_response,True,0.9182009696960449,True,False,False,False
+Visa requirements for traveling to Japan.,search_internet,search_internet,True,0.9694499969482422,search_internet,True,0.6534209251403809,True,False,False,False
+"If the universe is a simulation, what are some potential bugs or glitches we might experience?",general_ai_response,general_ai_response,True,0.7365970611572266,general_ai_response,True,0.703265905380249,True,False,False,False
+What was the purpose of the collection named 'GeneralSystemQueries'?,search_knowledge_base,search_knowledge_base,True,0.9456977844238281,search_knowledge_base,True,0.3771231174468994,True,False,False,False
+When was the internet invented?,search_internet,search_internet,True,1.0859081745147705,search_internet,True,0.5702009201049805,True,False,False,False
+Describe a utopia where the only form of art is creating beautiful spreadsheets.,general_ai_response,general_ai_response,True,0.6688950061798096,general_ai_response,True,0.89357590675354,True,False,False,False
+"If animals held a UN-style assembly, what would be their main concerns?",general_ai_response,general_ai_response,True,0.6937642097473145,general_ai_response,True,0.3037581443786621,True,False,False,False
+"If everyday objects could hold grudges, which object would be the most terrifying?",general_ai_response,general_ai_response,True,0.7728040218353271,general_ai_response,True,0.3543391227722168,True,False,False,False
+What if we could understand the 'speech' of plants?,general_ai_response,general_ai_response,True,0.8223950862884521,general_ai_response,True,0.6103839874267578,True,False,False,False
+Draft an email to ask for permission to use a copyrighted image.,email_assistant,email_assistant,True,0.9252161979675293,email_assistant,True,0.8147599697113037,True,False,False,False
+Write a scene for a play where two historical figures meet.,general_ai_response,general_ai_response,True,0.8230888843536377,general_ai_response,True,0.6379098892211914,True,False,False,False
+What parameters did I use with `chroma_query_documents` when looking for 'old Jira tickets'?,search_knowledge_base,search_knowledge_base,True,0.8056659698486328,search_knowledge_base,True,0.6185879707336426,True,False,False,False
+Generate a series of fortunes for extremely specific and mundane situations.,general_ai_response,general_ai_response,True,1.3355510234832764,general_ai_response,True,0.5128357410430908,True,False,False,False
+Top rated vacuum cleaners.,search_internet,search_internet,True,0.9161250591278076,search_internet,True,0.8733260631561279,True,False,False,False
+That specific case.,unknown,unknown,True,0.7515859603881836,unknown,True,0.420856237411499,True,False,False,False
+Help me write an email to a teacher about my child's progress.,email_assistant,email_assistant,True,0.789830207824707,email_assistant,True,0.5791769027709961,True,False,False,False
+Is it ready?,unknown,unknown,True,0.8735418319702148,unknown,True,0.6881301403045654,True,False,False,False
+Get all table names.,search_sqlite,search_sqlite,True,0.822396993637085,search_sqlite,True,0.4980659484863281,True,False,False,False
+Benefits of drinking green tea.,search_internet,general_ai_response,False,9.506408929824829,general_ai_response,False,0.7094120979309082,False,True,False,False
+Create a new constellation and the myth behind it.,general_ai_response,general_ai_response,True,0.8818039894104004,general_ai_response,True,0.7748239040374756,True,False,False,False
+List all branches in 'my-org/monorepo'.,search_github,search_github,True,0.6245391368865967,search_github,True,0.3464019298553467,True,False,False,False
+What are the PRs waiting for review in 'my-org/mobile-sdk'?,search_github,search_github,True,0.9145731925964355,search_github,True,0.6373729705810547,True,False,False,False
+Write a horror story that takes place in an ordinary supermarket.,general_ai_response,general_ai_response,True,0.7258250713348389,general_ai_response,True,1.6054160594940186,True,False,False,False
+Get details for commit 'sha123abc' in 'my-org/payment-processor'.,search_github,search_github,True,0.7758841514587402,search_github,True,0.6563441753387451,True,False,False,False
+Let's move forward.,unknown,unknown,True,1.0269277095794678,unknown,True,0.8225011825561523,True,False,False,False
+Trending topics on Twitter right now.,search_internet,search_internet,True,0.6544539928436279,search_internet,True,0.363400936126709,True,False,False,False
+Add a comment to the 'Code Review Guidelines' Confluence page: 'We should add a section on static analysis tools'.,search_atlassian,search_atlassian,True,0.9286520481109619,search_atlassian,True,0.6129999160766602,True,False,False,False
+Cheap flights to Paris.,search_internet,search_internet,True,2.7209548950195312,search_internet,True,0.6528100967407227,True,False,False,False
+I need to compose an email to provide an update on a support ticket.,email_assistant,email_assistant,True,0.7287406921386719,email_assistant,True,0.533433198928833,True,False,False,False
+"Search for repositories with 'kubernetes' and 'helm' in their description, owned by 'cloud-native-org'.",search_github,search_github,True,0.7897779941558838,search_github,True,1.6785080432891846,True,False,False,False
+What are some good books to read this summer?,search_internet,general_ai_response,False,0.778710126876831,general_ai_response,False,0.5076968669891357,False,True,False,False
+Explain the Drake Equation.,general_ai_response,general_ai_response,True,0.8252279758453369,general_ai_response,True,0.7118008136749268,True,False,False,False
+How to make a margarita?,search_internet,search_internet,True,1.3363001346588135,general_ai_response,False,0.6303019523620605,False,False,True,False
+Write a story where the main character communicates exclusively through puns.,general_ai_response,general_ai_response,True,0.6997790336608887,general_ai_response,True,0.5351402759552002,True,False,False,False
+"I need the coordinates for 'Times Square, New York'.",search_google_maps,search_google_maps,True,0.7940170764923096,search_google_maps,True,0.33896565437316895,True,False,False,False
+"What if clouds were made of cotton candy, but only for people who are truly happy?",general_ai_response,general_ai_response,True,0.8017678260803223,unknown,False,0.392240047454834,False,False,True,False
+Write a children's story about a shy volcano.,general_ai_response,general_ai_response,True,0.9284989833831787,general_ai_response,True,0.5083310604095459,True,False,False,False
+Draft an email announcing a new project launch.,email_assistant,email_assistant,True,0.7024190425872803,email_assistant,True,0.6276578903198242,True,False,False,False
+What are some innovative solutions to global poverty?,general_ai_response,general_ai_response,True,0.8215301036834717,general_ai_response,True,0.9848487377166748,True,False,False,False
+Write a job application for the role of 'Guardian of Lost Socks'.,general_ai_response,general_ai_response,True,2.1035032272338867,email_assistant,False,0.9016127586364746,False,False,True,False
+Remind me of any Jira issues I tried to transition to 'Closed'.,search_knowledge_base,search_atlassian,False,9.83565068244934,search_atlassian,False,0.7115421295166016,False,True,False,False
+"Write a children's story about a number that feels left out (e.g., the number 7 in a world obsessed with multiples of 3).",general_ai_response,general_ai_response,True,6.256208896636963,general_ai_response,True,0.7068169116973877,True,False,False,False
+Who won the F1 race last weekend?,search_internet,search_internet,True,3.7915568351745605,search_internet,True,0.6101071834564209,True,False,False,False
+What if gravity was 10% weaker?,general_ai_response,general_ai_response,True,0.9642741680145264,general_ai_response,True,0.6768631935119629,True,False,False,False
+What's the current weather in Chicago?,search_internet,search_internet,True,6.246877908706665,search_internet,True,0.6115221977233887,True,False,False,False
+Generate a list of completely useless superpowers.,general_ai_response,general_ai_response,True,1.6498851776123047,general_ai_response,True,0.46268630027770996,True,False,False,False
+What would be the national anthem of the internet?,general_ai_response,general_ai_response,True,0.9613618850708008,general_ai_response,True,0.5100750923156738,True,False,False,False
+What did I ask about 'code scanning alerts' for the 'WebAppV2' GitHub repo?,search_knowledge_base,search_github,False,0.9949150085449219,search_github,False,0.6549942493438721,False,True,False,False
+What's the Jira profile for 'john.doe'?,search_atlassian,search_atlassian,True,0.8740510940551758,search_atlassian,True,0.4486401081085205,True,False,False,False
+"If our shadows were our evil twins, what mischief would they cause?",general_ai_response,general_ai_response,True,0.8969848155975342,general_ai_response,True,0.561873197555542,True,False,False,False
+Create a marketing slogan for a teleportation device.,general_ai_response,general_ai_response,True,0.9047269821166992,general_ai_response,True,0.5366630554199219,True,False,False,False
+Write a fairytale about a princess who saves herself using her knowledge of coding.,general_ai_response,general_ai_response,True,0.725614070892334,general_ai_response,True,0.6719937324523926,True,False,False,False
+Best beaches in California.,search_internet,search_internet,True,0.9293022155761719,search_internet,True,0.607219934463501,True,False,False,False
+Show me high priority bugs in the 'MobileApp' project.,search_atlassian,search_atlassian,True,0.9625341892242432,search_atlassian,True,0.2944221496582031,True,False,False,False
+Get contents of 'src/main.py' from 'my-org/python-service' on the 'develop' branch.,search_github,search_github,True,1.40982985496521,search_github,True,0.6098077297210693,True,False,False,False
+"If clouds were made of solid objects that corresponded to their shapes, what would be the most interesting 'cloudfall'?",general_ai_response,general_ai_response,True,0.9343559741973877,general_ai_response,True,0.39711427688598633,True,False,False,False
+What are some famous unsolved mysteries?,general_ai_response,general_ai_response,True,0.7195956707000732,general_ai_response,True,0.9679281711578369,True,False,False,False
+"If sleep was a subscription service, what would the premium features be?",general_ai_response,general_ai_response,True,1.1926908493041992,general_ai_response,True,0.8703670501708984,True,False,False,False
+Write a love story between an AI and a human from the AI's perspective.,general_ai_response,general_ai_response,True,0.6546459197998047,general_ai_response,True,0.5096738338470459,True,False,False,False
+Search Jira for issues with 'login bug' in the summary for project 'Phoenix'.,search_atlassian,search_atlassian,True,0.6186561584472656,search_atlassian,True,0.7303969860076904,True,False,False,False
+"Log a new employee: FirstName 'Bob', LastName 'Builder', Department 'Construction', Salary 60000.",search_sqlite,search_sqlite,True,1.1014299392700195,search_sqlite,True,1.646440029144287,True,False,False,False
+"Describe a festival that celebrates the beauty of perfectly ordinary, everyday objects.",general_ai_response,general_ai_response,True,0.924462080001831,general_ai_response,True,1.0193250179290771,True,False,False,False
+Write a story about a world where the laws of physics are determined by popular vote.,general_ai_response,general_ai_response,True,0.8230252265930176,general_ai_response,True,0.7148869037628174,True,False,False,False
+"If animals could talk, which one would be the rudest?",general_ai_response,general_ai_response,True,0.7009410858154297,general_ai_response,True,0.3229517936706543,True,False,False,False
+Describe the philosophical concept of nihilism.,general_ai_response,general_ai_response,True,1.9482407569885254,general_ai_response,True,0.6109519004821777,True,False,False,False
+What's next?,unknown,unknown,True,0.7220518589019775,unknown,True,0.312744140625,True,False,False,False
+How much time was logged on 'DEV-555' last week?,search_atlassian,search_atlassian,True,0.9112708568572998,search_atlassian,True,0.9206619262695312,True,False,False,False
+Update the 'UI Overhaul Sprint': set the end date to next Friday.,search_atlassian,search_atlassian,True,0.8325119018554688,search_atlassian,True,0.8413639068603516,True,False,False,False
+Have I ever tried to update a document in ChromaDB related to a GitHub discussion?,search_knowledge_base,unknown,False,0.9885120391845703,search_knowledge_base,True,0.428696870803833,False,False,False,True
+"If the internet had a physical form, what would it look like?",general_ai_response,general_ai_response,True,1.116213083267212,general_ai_response,True,0.40019702911376953,True,False,False,False
+What is the elevation of Mount Fuji?,search_google_maps,search_internet,False,1.220045804977417,general_ai_response,False,0.5363712310791016,False,True,False,False
+Explain the basics of cryptocurrency.,general_ai_response,general_ai_response,True,1.0329699516296387,general_ai_response,True,0.5908339023590088,True,False,False,False
+Describe an AI's first experience of listening to music.,general_ai_response,general_ai_response,True,1.1287779808044434,general_ai_response,True,0.6105499267578125,True,False,False,False
+"If we found intelligent life on another planet, what's the first meme we should send them?",general_ai_response,general_ai_response,True,1.226227045059204,general_ai_response,True,0.7158088684082031,True,False,False,False
+How many of my interactions are stored in the 'JiraQueriesLog' collection?,search_knowledge_base,search_atlassian,False,0.7241647243499756,search_knowledge_base,True,0.8156709671020508,False,False,False,True
+Did I use the 'maps_geocode' tool for an address in Berlin?,search_knowledge_base,search_google_maps,False,0.6882917881011963,search_google_maps,False,0.7456493377685547,False,True,False,False
+"What if every time you lied, your nose grew an inch, like Pinocchio, but with a modern twist?",general_ai_response,general_ai_response,True,0.7252030372619629,general_ai_response,True,0.45329880714416504,True,False,False,False
+Find me a route to 'Yellowstone National Park' avoiding tolls.,search_google_maps,search_google_maps,True,1.2850120067596436,search_google_maps,True,0.4037308692932129,True,False,False,False
+Write an email to share a link to a new blog post with my subscribers.,email_assistant,email_assistant,True,1.1699130535125732,email_assistant,True,0.6740670204162598,True,False,False,False
+"If animals could write literature, what genre would a sloth specialize in?",general_ai_response,general_ai_response,True,0.7190871238708496,general_ai_response,True,8.905669927597046,True,False,False,False
+Driving directions from 'Miami Beach' to 'Orlando'.,search_google_maps,search_google_maps,True,0.9265432357788086,search_google_maps,True,0.7681369781494141,True,False,False,False
+"What's located at 51.5074° N, 0.1278° W?",search_google_maps,search_google_maps,True,1.2420291900634766,search_google_maps,True,0.44232177734375,True,False,False,False
+Write a news report from a future where gravity is a controllable utility.,general_ai_response,general_ai_response,True,1.7347090244293213,general_ai_response,True,0.8256227970123291,True,False,False,False
+Just explore.,unknown,unknown,True,0.8216509819030762,unknown,True,0.8193740844726562,True,False,False,False
+"Design an anachronistic piece of technology (e.g., a steam-powered smartphone).",general_ai_response,general_ai_response,True,0.9085350036621094,general_ai_response,True,0.3175489902496338,True,False,False,False
+Get travel times for bicycling from 'Point A' to 'Point B' and 'Point C'.,search_google_maps,search_google_maps,True,0.7190859317779541,search_google_maps,True,0.40721893310546875,True,False,False,False
+Write a job description for a 'Chief Dream Officer'.,general_ai_response,general_ai_response,True,0.8221111297607422,general_ai_response,True,0.4295387268066406,True,False,False,False
+How does the stock market work?,general_ai_response,general_ai_response,True,1.2026488780975342,general_ai_response,True,0.7201728820800781,True,False,False,False
+Write a poem about the feeling of a forgotten password.,general_ai_response,general_ai_response,True,0.7635061740875244,general_ai_response,True,0.5681827068328857,True,False,False,False
+Who last modified the 'Coding Standards' page in Confluence?,search_atlassian,search_atlassian,True,0.7303469181060791,search_atlassian,True,0.6017661094665527,True,False,False,False
+What are some common biases in human thinking?,general_ai_response,general_ai_response,True,1.230449914932251,general_ai_response,True,0.2869758605957031,True,False,False,False
+Release date for the next 'Legend of Zelda' game.,search_internet,search_internet,True,1.1354708671569824,search_internet,True,0.7440450191497803,True,False,False,False
+Show me the 'Frontend Team Board'.,search_atlassian,search_atlassian,True,1.0064468383789062,search_atlassian,True,0.30538511276245117,True,False,False,False
+Search for issues containing 'database connection timeout' across all 'my-org' repositories.,search_github,search_github,True,0.7552871704101562,search_github,True,0.5196449756622314,True,False,False,False
+"If books could feel pain, which book would be in the most agony from neglect?",general_ai_response,general_ai_response,True,0.6313498020172119,general_ai_response,True,0.4504587650299072,True,False,False,False
+Which products have a rating of 4 stars or higher?,search_sqlite,search_sqlite,True,0.7428591251373291,unknown,False,0.9978170394897461,False,False,True,False
+Write an email to follow up after a sales call.,email_assistant,email_assistant,True,0.7195289134979248,email_assistant,True,0.6235918998718262,True,False,False,False
+"Create a file 'config.json' in 'my-org/settings-repo' on the 'main' branch with content '{""key"": ""value""}' and commit message 'Add initial config'.",search_github,search_github,True,3.752744197845459,search_github,True,0.6377270221710205,True,False,False,False
+Write a compelling backstory for a villain who believes they are the hero.,general_ai_response,general_ai_response,True,0.8221220970153809,general_ai_response,True,0.609299898147583,True,False,False,False
+"What if the alphabet had a secret 27th letter, what would it sound like and what words would use it?",general_ai_response,general_ai_response,True,0.7793729305267334,general_ai_response,True,0.656700849533081,True,False,False,False
+Process this information.,unknown,unknown,True,1.2094941139221191,unknown,True,1.608630895614624,True,False,False,False
+Find the average salary in the engineering department.,search_sqlite,search_sqlite,True,0.693321943283081,search_sqlite,True,0.33530092239379883,True,False,False,False
+What was that again?,unknown,unknown,True,0.8652839660644531,unknown,True,0.26512789726257324,True,False,False,False
+Show me the 'Dockerfile' in 'my-org/container-app' at ref 'v1.0.0'.,search_github,search_github,True,0.8463687896728516,search_github,True,0.5003211498260498,True,False,False,False
+Draft a new blog post in Confluence about our latest product release.,search_atlassian,search_atlassian,True,2.541269063949585,search_atlassian,True,0.7598369121551514,True,False,False,False
+Write a set of commandments for modern internet etiquette.,general_ai_response,general_ai_response,True,0.7540180683135986,general_ai_response,True,0.2749440670013428,True,False,False,False
+How far is it from 'Berlin' to 'Munich' versus 'Berlin' to 'Hamburg' by car?,search_google_maps,search_google_maps,True,0.7078509330749512,search_google_maps,True,0.514254093170166,True,False,False,False
+"What address corresponds to 43.6532° N, 79.3832° W?",search_google_maps,search_google_maps,True,0.7754960060119629,search_google_maps,True,0.7605710029602051,True,False,False,False
+Log 2 hours of work on 'TASK-910' with the comment 'Implemented API endpoint'.,search_atlassian,search_atlassian,True,0.8238201141357422,unknown,False,0.507655143737793,False,False,True,False
+Write a conversation between your left brain and your right brain.,general_ai_response,general_ai_response,True,1.1635510921478271,general_ai_response,True,0.7829611301422119,True,False,False,False
+What's the detail for secret alert 7 in 'my-org/deployment-scripts'?,search_github,search_github,True,0.82328200340271,search_github,True,0.5056979656219482,True,False,False,False
+How would society change if humans could regenerate limbs?,general_ai_response,general_ai_response,True,0.7359960079193115,general_ai_response,True,0.39324498176574707,True,False,False,False
+"If all insects formed a giant, coordinated swarm, what would be their first demand?",general_ai_response,general_ai_response,True,0.820573091506958,general_ai_response,True,0.5610198974609375,True,False,False,False
+What was the Jira issue key when I asked about 'updating issue priority'?,search_knowledge_base,search_atlassian,False,0.6972317695617676,search_atlassian,False,0.77488112449646,False,True,False,False
+Design a new type of cloud.,general_ai_response,general_ai_response,True,0.9362969398498535,general_ai_response,True,0.509951114654541,True,False,False,False
+I need to send an email to a booking agent for a performance.,email_assistant,email_assistant,True,1.3354277610778809,email_assistant,True,0.6091442108154297,True,False,False,False
+Show me the total number of products in stock.,search_sqlite,search_sqlite,True,0.8212008476257324,search_sqlite,True,0.5349628925323486,True,False,False,False
+Get all unpaid invoices.,search_sqlite,search_sqlite,True,0.8384599685668945,search_sqlite,True,0.6945302486419678,True,False,False,False
+Make a 'Departments' table with DepartmentID and DepartmentName.,search_sqlite,search_sqlite,True,0.7565438747406006,search_sqlite,True,0.7604920864105225,True,False,False,False
+"Log a new Jira bug: 'Confluence search returning 500 error intermittently', project 'AtlassianTools'.",search_atlassian,search_atlassian,True,0.7565402984619141,search_atlassian,True,1.5956590175628662,True,False,False,False
+Difference between a virus and bacteria.,search_internet,general_ai_response,False,1.5659918785095215,general_ai_response,False,0.7885558605194092,False,True,False,False
+"What if our own cells held tiny, conscious civilizations within them?",general_ai_response,general_ai_response,True,1.3397011756896973,general_ai_response,True,0.6087069511413574,True,False,False,False
+"Okay, now what?",unknown,unknown,True,0.923569917678833,unknown,True,0.6528680324554443,True,False,False,False
+How much water should I drink a day?,search_internet,general_ai_response,False,0.7319049835205078,general_ai_response,False,0.5153379440307617,False,True,False,False
+Compose an email to announce an office relocation.,email_assistant,email_assistant,True,1.1699597835540771,email_assistant,True,0.6117658615112305,True,False,False,False
+"If historical figures had social media profiles, what would be a controversial post by Leonardo da Vinci?",general_ai_response,general_ai_response,True,0.9282262325286865,general_ai_response,True,0.5872588157653809,True,False,False,False
+What's the distance between 'Statue of Liberty' and 'Empire State Building'?,search_google_maps,search_google_maps,True,0.9676308631896973,search_google_maps,True,0.8551080226898193,True,False,False,False
+Help me craft an email to a vendor about a late delivery.,email_assistant,email_assistant,True,0.8646199703216553,email_assistant,True,0.6213829517364502,True,False,False,False
+Imagine a world where people age in reverse. How would society function?,general_ai_response,general_ai_response,True,0.7638988494873047,general_ai_response,True,0.6577987670898438,True,False,False,False
+"If dogs ruled the world, what laws would they make?",general_ai_response,general_ai_response,True,0.7183971405029297,general_ai_response,True,0.44066691398620605,True,False,False,False
+"Tell me what's at latitude 29.9792, longitude 31.1342.",search_google_maps,search_google_maps,True,0.9953620433807373,search_google_maps,True,0.34893202781677246,True,False,False,False
+Show me closed issues in 'my-org/legacy-system' that were updated in the last month.,search_github,search_github,True,0.8669700622558594,search_github,True,0.5227189064025879,True,False,False,False
+"Describe a civilization that lives on the back of a giant, space-faring creature.",general_ai_response,general_ai_response,True,0.7780330181121826,general_ai_response,True,0.46335792541503906,True,False,False,False
+What columns does the 'Shipments' table have?,search_sqlite,search_sqlite,True,1.1167857646942139,search_sqlite,True,0.3276350498199463,True,False,False,False
+What if your favorite fictional character was your roommate?,general_ai_response,general_ai_response,True,0.6827230453491211,general_ai_response,True,0.48327016830444336,True,False,False,False
+Record business insight: The new UI has led to a 10% reduction in cart abandonment.,search_sqlite,search_knowledge_base,False,0.7593669891357422,search_knowledge_base,False,0.7498819828033447,False,True,False,False
+List open secret scanning alerts in 'my-org/secrets-management' for 'AWS access key'.,search_github,search_github,True,1.3974809646606445,search_github,True,0.8871700763702393,True,False,False,False
+"You know, the thing with the server.",unknown,unknown,True,0.9822039604187012,unknown,True,0.49102020263671875,True,False,False,False
+Describe a landscape on a planet where the grass is made of glass.,general_ai_response,general_ai_response,True,0.9202821254730225,general_ai_response,True,0.3050680160522461,True,False,False,False
+Write a story where the protagonist can only speak in questions.,general_ai_response,general_ai_response,True,0.7175350189208984,general_ai_response,True,0.4600250720977783,True,False,False,False
+Describe the internet as if it were a newly discovered ecosystem.,general_ai_response,general_ai_response,True,0.6661131381988525,general_ai_response,True,0.6123359203338623,True,False,False,False
+Write a startup pitch for a company that manufactures artificial aurora borealis for home use.,general_ai_response,general_ai_response,True,0.7278821468353271,general_ai_response,True,0.4934549331665039,True,False,False,False
+Create a recipe that uses only ingredients that are blue.,general_ai_response,general_ai_response,True,1.0942461490631104,general_ai_response,True,0.34560370445251465,True,False,False,False
+Write an email to a family member planning a reunion.,email_assistant,email_assistant,True,0.7196459770202637,email_assistant,True,0.6094789505004883,True,False,False,False
