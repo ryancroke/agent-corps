@@ -1,0 +1,42 @@
+# Ruff configuration for A2A MCP Text-to-SQL project
+
+# Target Python 3.11
+target-version = "py311"
+
+# Set line length to 88 (black default)
+line-length = 88
+
+# Enable specific linting rules
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+
+# Ignore specific rules that might be too strict for this project
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+# Exclude certain directories
+exclude = [
+    ".venv",
+    "__pycache__",
+    ".git",
+]
+
+# Configure specific rules
+[lint.per-file-ignores]
+"tests/*" = ["F401", "F811"]  # Allow unused imports in tests
+
+[format]
+# Use double quotes for strings
+quote-style = "double"
+
+# Use spaces around operators
+indent-style = "space" 

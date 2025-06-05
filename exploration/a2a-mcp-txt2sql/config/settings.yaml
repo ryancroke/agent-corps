@@ -1,0 +1,89 @@
+# A2A MCP Text-to-SQL Configuration
+
+# Database Configuration
+database:
+  path: "data/Chinook_Sqlite.db
+
+# Database Configuration
+database:
+  path: "data/Chinook_Sqlite.db"  # Updated to your actual database
+  type: "sqlite"
+  description: "Chinook sample database for music store"
+
+# LLM Configuration
+llm:
+  provider: "openai"  # or "anthropic", "ollama", etc.
+  model: "gpt-4o-mini"  # Updated to faster model for development
+  temperature: 0.1
+  max_tokens: 2000  # Increased for longer SQL explanations
+
+# MCP Integration Configuration
+mcp:
+  config_file: "config/mcp_config.json"  # External MCP server configurations
+  timeout: 30  # seconds for MCP operations
+  max_steps: 10  # Maximum steps for MCP agents
+  
+# Streamlit UI Configuration
+ui:
+  title: "A2A MCP Text-to-SQL Demo"
+  port: 8501
+  show_agent_status: true  # Show real-time agent status in sidebar
+  debug_mode: false  # Show detailed logs in UI
+
+# A2A Agent Configuration
+a2a:
+  timeout: 30  # seconds
+  max_retries: 3
+  agent_discovery_timeout: 10  # seconds to discover other agents
+  
+# LangGraph Workflow Configuration
+workflow:
+  max_iterations: 5
+  enable_human_in_loop: false  # For debugging complex queries
+  
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  log_to_file: true
+  log_file: "logs/app.log"
+  
+# Development Settings
+development:
+  reload_on_change: true
+  mock_agents: false  # Use mock agents for testing without MCP servers"
+  type: "sqlite"
+
+# LLM Configuration
+llm:
+  provider: "openai"  # or "anthropic", "ollama", etc.
+  model: "gpt-4"
+  temperature: 0.1
+  max_tokens: 1000
+
+# MCP Server Configuration
+mcp_servers:
+  sqlite_server:
+    host: "localhost"
+    port: 8001
+  repl_server:
+    host: "localhost"
+    port: 8002
+  logging_server:
+    host: "localhost"
+    port: 8003
+
+# Streamlit UI Configuration
+ui:
+  title: "A2A MCP Text-to-SQL Demo"
+  port: 8501
+
+# A2A Configuration
+a2a:
+  timeout: 30  # seconds
+  max_retries: 3
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s" 
