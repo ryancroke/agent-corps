@@ -7,6 +7,14 @@
         "@executeautomation/database-server",
         "data/Chinook_Sqlite.db"
       ]
-    }
+    },
+    "python_repl": {
+                    "command": "deno",
+                    "args": [
+                        "run", "-N", "-R=node_modules", "-W=node_modules",
+                        "--node-modules-dir=auto",
+                        "jsr:@pydantic/mcp-run-python", "stdio"
+                    ]
+                }
   }
 }

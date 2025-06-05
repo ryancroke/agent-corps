@@ -17,9 +17,16 @@ class SQLiteMCP:
     async def initialize(self):
         """Initialize the MCP client and agent."""
         with open(self.config_path, 'r') as f:
-            config = json.load(f)
+            full_config = json.load(f)
+            
+        # Extract just python_repl server
+        sqlite_config = {
+            "mcpServers": {
+                "sqlite": full_config["mcpServers"]["sqlite"]
+            }
+        }
         
-        self.client = MCPClient.from_dict(config)
+        self.client = MCPClient.from_dict(sqlite_config)
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
         self.agent = MCPAgent(llm=llm, client=self.client, max_steps=10)
         
