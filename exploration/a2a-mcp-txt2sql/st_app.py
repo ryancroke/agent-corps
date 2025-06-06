@@ -3,9 +3,12 @@ Polished Streamlit chat interface for A2A MCP SQL orchestrator.
 Uses professional styling from your existing app.
 """
 
-import streamlit as st
 import asyncio
-from enhanced_orchestrator import EnhancedSQLOrchestrator
+import uuid
+
+import streamlit as st
+
+from enhanced_orchestrator import EnhancedSQLOrchestrator, State
 
 
 def get_custom_css():
@@ -13,16 +16,16 @@ def get_custom_css():
     return """
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
-    
+
     * {
         font-family: 'Poppins', sans-serif;
     }
-    
+
     .stApp {
         background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
         color: #f1f5f9;
     }
-    
+
     /* Main header */
     .main-header {
         text-align: center;
@@ -35,7 +38,7 @@ def get_custom_css():
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     .main-header h1 {
         font-size: 3rem;
         font-weight: 800;
@@ -46,14 +49,14 @@ def get_custom_css():
         -webkit-text-fill-color: transparent;
         background-clip: text;
     }
-    
+
     .main-header p {
         font-size: 1.3rem;
         font-weight: 400;
         opacity: 0.9;
         text-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
-    
+
     /* Chat container */
     .chat-container {
         background: linear-gradient(145deg, #1e293b 0%, #334155 100%);
@@ -66,7 +69,7 @@ def get_custom_css():
         position: relative;
         overflow: hidden;
     }
-    
+
     .chat-container::before {
         content: '';
         position: absolute;
@@ -77,7 +80,7 @@ def get_custom_css():
         background: linear-gradient(90deg, #6366f1, #8b5cf6, #ec4899, #f59e0b);
         border-radius: 24px 24px 0 0;
     }
-    
+
     /* Status indicators */
     .status-ready {
         background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
@@ -90,7 +93,7 @@ def get_custom_css():
         box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
+
     /* Example queries */
     .example-queries {
         background: linear-gradient(145deg, #1e293b 0%, #334155 100%);
@@ -100,14 +103,14 @@ def get_custom_css():
         border: 1px solid rgba(99, 102, 241, 0.3);
         box-shadow: 0 10px 30px rgba(0,0,0,0.2);
     }
-    
+
     .example-title {
         font-weight: 700;
         color: #6366f1;
         margin-bottom: 1.5rem;
         font-size: 1.2rem;
     }
-    
+
     .example-query {
         background: rgba(99, 102, 241, 0.1);
         border-radius: 12px;
@@ -119,13 +122,13 @@ def get_custom_css():
         color: #f1f5f9;
         font-weight: 500;
     }
-    
+
     .example-query:hover {
         transform: translateX(8px);
         background: rgba(99, 102, 241, 0.2);
         box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
     }
-    
+
     /* Chat messages */
     .stChatMessage {
         background: rgba(30, 41, 59, 0.6) !important;
@@ -134,7 +137,7 @@ def get_custom_css():
         backdrop-filter: blur(10px) !important;
         margin-bottom: 1rem !important;
     }
-    
+
     /* Chat input */
     .stChatInput textarea {
         background: linear-gradient(145deg, #1e293b 0%, #334155 100%) !important;
@@ -143,39 +146,39 @@ def get_custom_css():
         color: #f1f5f9 !important;
         font-family: 'Poppins', sans-serif !important;
     }
-    
+
     .stChatInput textarea:focus {
         border-color: #6366f1 !important;
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2) !important;
     }
-    
+
     /* Spinner */
     .stSpinner > div {
         border-top-color: #6366f1 !important;
     }
-    
+
     /* Hide Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
     .stDeployButton {visibility: hidden;}
-    
+
     /* Custom scrollbar */
     ::-webkit-scrollbar {
         width: 12px;
     }
-    
+
     ::-webkit-scrollbar-track {
         background: #1e293b;
         border-radius: 6px;
     }
-    
+
     ::-webkit-scrollbar-thumb {
         background: linear-gradient(135deg, #6366f1, #8b5cf6);
         border-radius: 6px;
         border: 2px solid #1e293b;
     }
-    
+
     ::-webkit-scrollbar-thumb:hover {
         background: linear-gradient(135deg, #4f46e5, #7c3aed);
     }
@@ -196,10 +199,10 @@ def main():
         layout="wide",
         initial_sidebar_state="collapsed"
     )
-    
+
     # Apply custom CSS
     st.markdown(get_custom_css(), unsafe_allow_html=True)
-    
+
     # Header
     st.markdown("""
     <div class="main-header">
@@ -207,65 +210,66 @@ def main():
         <p>Chat with your Chinook Music Database using AI • Powered by A2A & MCP protocols</p>
     </div>
     """, unsafe_allow_html=True)
-    
-    # Chat container
-    with st.container():
-        st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-        
-        # Initialize orchestrator
-        if "orchestrator" not in st.session_state:
-            with st.spinner("🚀 Initializing AI agents and MCP servers..."):
-                orchestrator = EnhancedSQLOrchestrator()
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                loop.run_until_complete(orchestrator.initialize())
-                st.session_state.orchestrator = orchestrator
-                st.session_state.loop = loop
-            
-            st.markdown('<div class="status-ready">✅ System Ready - A2A Validation Active</div>', unsafe_allow_html=True)
-        
-        # Example queries (show only when no chat history)
-        if "messages" not in st.session_state or len(st.session_state.messages) == 0:
-            st.markdown("""
-            <div class="example-queries">
-                <div class="example-title">💡 Try these example queries:</div>
-                <div class="example-query">🎤 How many artists are in the database?</div>
-                <div class="example-query">💿 Show me the top 5 albums by track count</div>
-                <div class="example-query">🎸 Which genres have the most tracks?</div>
-                <div class="example-query">💰 What are the total sales by country?</div>
-                <div class="example-query">⚠️ DROP TABLE Artist (this will be blocked!)</div>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Initialize chat history
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-        
-        # Display chat history
-        for message in st.session_state.messages:
-            with st.chat_message(message["role"], avatar="🎵" if message["role"] == "assistant" else "🧑"):
-                st.markdown(message["content"])
-        
-        # Chat input
-        if prompt := st.chat_input("Ask me anything about the music database... 🎵"):
-            # Add user message
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            with st.chat_message("user", avatar="🧑"):
-                st.markdown(prompt)
-            
-            # Get assistant response
-            with st.chat_message("assistant", avatar="🎵"):
-                with st.spinner("🤖 AI agents collaborating..."):
-                    response = st.session_state.loop.run_until_complete(
-                        get_response(prompt, st.session_state.orchestrator)
-                    )
-                st.markdown(response)
-            
-            # Add assistant message
-            st.session_state.messages.append({"role": "assistant", "content": response})
-        
-        st.markdown('</div>', unsafe_allow_html=True)
 
+    if "orchestrator" not in st.session_state:
+        with st.spinner("🚀 Initializing AI agents and MCP servers..."):
+            st.session_state.orchestrator = EnhancedSQLOrchestrator()
+            asyncio.run(st.session_state.orchestrator.initialize())
+        st.markdown('<div class="status-ready">✅ System Ready - A2A Validation Active</div>', unsafe_allow_html=True)
+
+    if "thread_id" not in st.session_state:
+        st.session_state.thread_id = str(uuid.uuid4())
+
+    # This list will now be our simple source of truth for the UI
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # 2. Display the entire chat history from the simple session state list
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"], avatar=message.get("avatar")):
+            st.markdown(message["content"])
+            # Display bonus content like SQL if it exists
+            if "sql_query" in message and message["sql_query"]:
+                with st.expander("🔍 View Generated SQL"):
+                    st.code(message["sql_query"], language="sql")
+
+    # 3. Handle user input
+    if prompt := st.chat_input("Ask me anything about the music database... 🎵"):
+        # Append and display the user's message
+        st.session_state.messages.append({"role": "user", "content": prompt, "avatar": "🧑"})
+        with st.chat_message("user", avatar="🧑"):
+            st.markdown(prompt)
+
+        # Call the orchestrator and display the response
+        with st.chat_message("assistant", avatar="🎵"):
+            with st.spinner("🤖 AI agents collaborating..."):
+                orchestrator: EnhancedSQLOrchestrator = st.session_state.orchestrator
+
+                # The orchestrator is called with the prompt and thread_id
+                final_state: State = asyncio.run(orchestrator.run(
+                    user_query=prompt,
+                    thread_id=st.session_state.thread_id
+                ))
+
+                response_content = final_state.get("final_response", "Sorry, an error occurred.")
+                st.markdown(response_content)
+
+                # Also display the SQL in the same message bubble
+                sql_query_generated = final_state.get("sql_query")
+                if sql_query_generated:
+                    with st.expander("🔍 View Generated SQL"):
+                        st.code(sql_query_generated, language="sql")
+
+                # Append the full response data to our history list
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": response_content,
+                    "avatar": "🎵",
+                    "sql_query": sql_query_generated
+                })
+
+# The example queries section can be added back if desired,
+# checking `if not st.session_state.messages:`
 
 if __name__ == "__main__":
     main()
