@@ -4,7 +4,8 @@ Enhanced orchestrator with A2A SQL validation.
 
 import asyncio
 import json
-from typing import TypedDict
+from datetime import datetime
+from typing import TypedDict, List
 from langgraph.graph import StateGraph, START, END
 from langchain_openai import ChatOpenAI
 from mcp_servers.sqlite_interface import SQLiteMCP
@@ -20,6 +21,8 @@ class State(TypedDict):
     validation_result: dict
     sql_result: str
     final_response: str
+    mcp_servers_used: List[str]
+    agents_used: List[str]
 
 
 class EnhancedSQLOrchestrator:
@@ -74,6 +77,7 @@ class EnhancedSQLOrchestrator:
         prompt = f"Does this query need database access? Answer only 'yes' or 'no': {state['user_query']}"
         response = await self.llm.ainvoke(prompt)
         needs_sql = "yes" in response.content.lower()
+        print(f"✓ Query needs SQL: {needs_sql}")
         return {**state, "needs_sql": needs_sql}
     
     async def _generate_sql(self, state: State) -> State:
@@ -91,8 +95,10 @@ Example: SELECT COUNT(*) FROM Artist"""
             lines = sql_query.split("\n")
             sql_query = "\n".join(line for line in lines if not line.startswith("```") and line.strip())
             sql_query = sql_query.strip()
+            
+        agents_used = state.get("agents_used", []) + ["sql_generator_llm"]
         
-        return {**state, "sql_query": sql_query}
+        return {**state, "sql_query": sql_query, "agents_used": agents_used}
     
     async def _validate_sql(self, state: State) -> State:
         """Validate SQL using A2A agent."""
@@ -115,13 +121,29 @@ Example: SELECT COUNT(*) FROM Artist"""
         else:
             validation_result = {"is_valid": False, "issues": ["Validation failed"], "safe": False}
             is_valid = False
+            
+        agents_used = state.get("agents_used", []) + ["sql_validation_agent"]
+        mcp_servers_used = state.get("mcp_servers_used", []) + ["python_repl_mcp"]
         
-        return {**state, "is_valid": is_valid, "validation_result": validation_result}
+        return {
+        **state, 
+        "is_valid": is_valid, 
+        "validation_result": validation_result,
+        "agents_used": agents_used,
+        "mcp_servers_used": mcp_servers_used
+        }
     
     async def _execute_sql(self, state: State) -> State:
         """Execute validated SQL."""
         result = await self.sqlite_mcp.query(f"Execute: {state['sql_query']}")
-        return {**state, "sql_result": result, "final_response": result}
+        mcp_servers_used = state.get("mcp_servers_used", []) + ["sqlite_mcp"]
+        
+        return {
+            **state, 
+            "sql_result": result, 
+            "final_response": result,
+            "mcp_servers_used": mcp_servers_used
+        }
     
     async def _direct_response(self, state: State) -> State:
         """Handle non-SQL or invalid SQL."""
@@ -134,20 +156,22 @@ Example: SELECT COUNT(*) FROM Artist"""
             error_msg = f"SQL validation failed: {', '.join(issues)}"
             return {**state, "final_response": error_msg}
         
-    # In enhanced_orchestrator.py, inside the EnhancedSQLOrchestrator class
-
-    # ... after the _direct_response method ...
 
     async def _log_interaction(self, final_state: State):
         """Logs the complete interaction details to ChromaDB."""
         # We use .get() for optional fields to avoid KeyErrors
+        mcp_used = final_state.get("mcp_servers_used", [])
+        agents_used = final_state.get("agents_used", [])
+        
         interaction_details = {
             "user_query": final_state.get("user_query"),
             "response": final_state.get("final_response"),
-            "mcp_servers_used": ["sqlite_mcp", "repl_validator_mcp"], # Example
-            "agents_used": ["sql_generator", "sql_validator"], # Example
+            "mcp_servers_used": mcp_used,
+            "agents_used": agents_used, 
             "sql_generated": final_state.get("sql_query"),
             "validation_result": final_state.get("validation_result"),
+            'timestamp': datetime.now().isoformat()
+
             # Add any other relevant details from the state
         }
         
@@ -183,12 +207,14 @@ Example: SELECT COUNT(*) FROM Artist"""
             "is_valid": False,
             "validation_result": {},
             "sql_result": "",
-            "final_response": ""
+            "final_response": "",
+            "mcp_servers_used": [],
+        "agents_used": []
         }
         
-        result = await self.graph.ainvoke(initial_state)
-        await self._log_interaction(result)
-        return result["final_response"]
+        final_state = await self.graph.ainvoke(initial_state)
+        await self._log_interaction(final_state)
+        return final_state["final_response"]
     
     async def close(self):
         """Clean up resources."""
