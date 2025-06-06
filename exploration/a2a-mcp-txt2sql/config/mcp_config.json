@@ -15,6 +15,16 @@
                         "--node-modules-dir=auto",
                         "jsr:@pydantic/mcp-run-python", "stdio"
                     ]
-                }
+                },
+                "chroma": {
+                  "command": "uvx",
+                  "args": [
+                      "chroma-mcp",
+                      "--client-type", 
+                      "persistent",
+                      "--data-dir", 
+                      "data/chroma_db"
+                  ]
+              }
   }
 }
