@@ -62,7 +62,7 @@ class ChromaMCP:
 
         self.client = MCPClient.from_dict(chroma_config)
         llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        self.agent = MCPAgent(llm=llm, client=self.client, max_steps=10)
+        self.agent = MCPAgent(llm=llm, client=self.client, max_steps=20)
 
         print("✓ ChromaDB MCP initialized")
 

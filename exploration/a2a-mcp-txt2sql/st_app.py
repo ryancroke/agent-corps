@@ -243,30 +243,38 @@ def main():
         # Call the orchestrator and display the response
         with st.chat_message("assistant", avatar="🎵"):
             with st.spinner("🤖 AI agents collaborating..."):
-                orchestrator: EnhancedSQLOrchestrator = st.session_state.orchestrator
+                try:
+                    orchestrator: EnhancedSQLOrchestrator = st.session_state.orchestrator
 
-                # The orchestrator is called with the prompt and thread_id
-                final_state: State = asyncio.run(orchestrator.run(
-                    user_query=prompt,
-                    thread_id=st.session_state.thread_id
-                ))
+                    final_state: State = asyncio.run(orchestrator.run(
+                        user_query=prompt,
+                        thread_id=st.session_state.thread_id
+                    ))
 
-                response_content = final_state.get("final_response", "Sorry, an error occurred.")
-                st.markdown(response_content)
+                    response_content = final_state.get("final_response", "Sorry, an error occurred.")
+                    st.markdown(response_content)
 
-                # Also display the SQL in the same message bubble
-                sql_query_generated = final_state.get("sql_query")
-                if sql_query_generated:
-                    with st.expander("🔍 View Generated SQL"):
-                        st.code(sql_query_generated, language="sql")
+                    # Also display the SQL in the same message bubble
+                    sql_query_generated = final_state.get("sql_query")
+                    if sql_query_generated:
+                        with st.expander("🔍 View Generated SQL"):
+                            st.code(sql_query_generated, language="sql")
 
-                # Append the full response data to our history list
-                st.session_state.messages.append({
-                    "role": "assistant",
-                    "content": response_content,
-                    "avatar": "🎵",
-                    "sql_query": sql_query_generated
-                })
+                    # Append the full response data to our history list
+                    st.session_state.messages.append({
+                        "role": "assistant",
+                        "content": response_content,
+                        "avatar": "🎵",
+                        "sql_query": sql_query_generated
+                    })
+
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.session_state.messages.append({
+                        "role": "assistant", 
+                        "content": f"Error occurred: {str(e)}",
+                        "avatar": "🎵"
+                    })
 
 # The example queries section can be added back if desired,
 # checking `if not st.session_state.messages:`

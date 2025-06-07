@@ -15,6 +15,7 @@ from langgraph.graph.message import add_messages
 from agents.sql_validation_agent import SQLValidationAgent
 from mcp_servers.chroma_interface import ChromaMCP
 from mcp_servers.sqlite_interface import SQLiteMCP
+from mcp_isolation import MCPIsolationLayer
 
 
 class State(TypedDict):
@@ -38,14 +39,20 @@ class EnhancedSQLOrchestrator:
         self.chroma_logger = ChromaMCP()
         self.checkpointer = InMemorySaver()
         self.graph = None
+        
+        # NEW: MCP Isolation Layer
+        self.mcp_isolation = MCPIsolationLayer()
 
     async def initialize(self):
         """Initialize all components."""
         await self.sqlite_mcp.initialize()
         await self.validator.initialize()
         await self.chroma_logger.initialize()
+        
+        # Register MCP servers with isolation layer
+        self.mcp_isolation.register_server("sqlite", self.sqlite_mcp)
+        
         self.graph = self._build_graph()
-        print("✓ Enhanced SQL Orchestrator initialized")
 
     def _build_graph(self):
         """Build LangGraph with A2A validation."""
@@ -87,8 +94,8 @@ class EnhancedSQLOrchestrator:
         prompt = f"Does this query need database access? Answer only 'yes' or 'no': {state['user_query']}"
         response = await self.llm.ainvoke(prompt)
         needs_sql = "yes" in response.content.lower()
-        print(f"✓ Query needs SQL: {needs_sql}")
         return {**state, "needs_sql": needs_sql}
+
 
     async def _contextualize_query(self, state: State) -> State:
         """Rewrite the user's query using the message history from the state."""
@@ -97,13 +104,7 @@ class EnhancedSQLOrchestrator:
 
         # If it's the start of a conversation, no context needed
         if len(state["messages"]) <= 1:
-            return {"standalone_query": user_query}
-
-        # Use the contextualizer logic (can be in a separate file)
-        # Note: We need to adapt the `contextualize_query` function slightly
-        # to not require the `last_turn_state` as a separate object, but we can
-        # derive it from the message history if needed. For now, a simpler
-        # approach is to just use the message history.
+            return {"user_query": user_query}
 
         context_prompt = f"""Based on the chat history, rewrite the following user query to be a standalone question.
 
@@ -116,9 +117,8 @@ class EnhancedSQLOrchestrator:
 
         response = await self.llm.ainvoke(context_prompt)
         rewritten_query = response.content.strip()
-        print(f"✓ Contextualized query: {rewritten_query}")
 
-        return {"standalone_query": rewritten_query}
+        return {"user_query": rewritten_query}
 
     async def _generate_sql(self, state: State) -> State:
         """Generate SQL query."""
@@ -175,15 +175,44 @@ Example: SELECT COUNT(*) FROM Artist"""
 
     async def _execute_sql(self, state: State) -> State:
         """Execute validated SQL."""
-        result = await self.sqlite_mcp.query(f"Execute: {state['sql_query']}")
-        mcp_servers_used = state.get("mcp_servers_used", []) + ["sqlite_mcp"]
-
-        return {
-            **state,
-            "sql_result": result,
-            "final_response": result,
-            "mcp_servers_used": mcp_servers_used
-        }
+        # Check connection health before executing
+        is_healthy = await self.sqlite_mcp.health_check()
+        if not is_healthy:
+            return {
+                **state,
+                "sql_result": "MCP connection failed health check",
+                "final_response": "Database connection error - please try again",
+                "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_failed"]
+            }
+        
+        try:
+            # Execute through clean isolation layer
+            mcp_response = await self.mcp_isolation.execute_sql_query(state)
+            
+            if mcp_response.success:
+                mcp_servers_used = state.get("mcp_servers_used", []) + ["sqlite_mcp_isolated"]
+                
+                return {
+                    **state,
+                    "sql_result": mcp_response.content,
+                    "final_response": mcp_response.content,
+                    "mcp_servers_used": mcp_servers_used
+                }
+            else:
+                return {
+                    **state,
+                    "sql_result": f"Execution error: {mcp_response.error_message}",
+                    "final_response": f"Database query failed: {mcp_response.error_message}",
+                    "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_isolated_error"]
+                }
+        except Exception as e:
+            print(f"❌ SQL execution failed: {e}")
+            return {
+                **state,
+                "sql_result": f"Execution error: {str(e)}",
+                "final_response": f"Database query failed: {str(e)}",
+                "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_error"]
+            }
 
     async def _direct_response(self, state: State) -> State:
         """Handle non-SQL or invalid SQL."""
@@ -218,10 +247,9 @@ Example: SELECT COUNT(*) FROM Artist"""
 
         try:
             await self.chroma_logger.add_log(interaction_details)
-            print("✓ Interaction logged to ChromaDB")
         except Exception as e:
             # Never let logging failures crash the main application
-            print(f"✗ Failed to log interaction to ChromaDB: {e}")
+            pass
 
     async def _initialize_state(self, state: State) -> State:
         """
@@ -256,13 +284,19 @@ Example: SELECT COUNT(*) FROM Artist"""
 
     async def run(self, user_query: str, thread_id: str) -> State:
         """Process query through enhanced workflow."""
-
         inputs = {"messages": [("user", user_query)]}
         config = {"configurable": {"thread_id": thread_id}}
 
-        final_state = await self.graph.ainvoke(inputs, config)
-        await self._log_interaction(final_state)
-        return final_state
+        try:
+            final_state = await self.graph.ainvoke(inputs, config)
+            await self._log_interaction(final_state)
+            return final_state
+            
+        except Exception as e:
+            print(f"❌ Enhanced Orchestrator - Run failed: {e}")
+            import traceback
+            traceback.print_exc()
+            raise
 
     async def close(self):
         """Clean up resources."""

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎵 SQL Chat AI</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="main-header">
+            <h1>🎵 SQL Chat AI</h1>
+            <p>Chat with your Chinook Music Database using AI • Powered by A2A & MCP protocols</p>
+            <div class="status-indicator" id="status">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </header>
+
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <div class="chat-messages" id="chatMessages">
+                <!-- Welcome message -->
+                <div class="message assistant-message">
+                    <div class="message-avatar">🎵</div>
+                    <div class="message-content">
+                        <div class="message-text">
+                            Welcome! I can help you explore the Chinook music database. Try asking questions like:
+                            <ul>
+                                <li>"How many artists are in the database?"</li>
+                                <li>"Show me the top 5 albums by sales"</li>
+                                <li>"What genres are available?"</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Area -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <input 
+                        type="text" 
+                        id="messageInput" 
+                        placeholder="Ask me anything about the music database... 🎵"
+                        disabled
+                    >
+                    <button id="sendButton" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="loading-indicator" id="loadingIndicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>AI agents collaborating...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Example Queries (shown when chat is empty) -->
+        <div class="example-queries" id="exampleQueries">
+            <h3>💡 Try these example queries:</h3>
+            <div class="example-query" data-query="How many artists are in the database?">
+                How many artists are in the database?
+            </div>
+            <div class="example-query" data-query="What are the top 5 best-selling albums?">
+                What are the top 5 best-selling albums?
+            </div>
+            <div class="example-query" data-query="Which genre has the most tracks?">
+                Which genre has the most tracks?
+            </div>
+            <div class="example-query" data-query="Show me all the artists from Brazil">
+                Show me all the artists from Brazil
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by FastAPI, LangGraph, and MCP protocols</p>
+        </footer>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
