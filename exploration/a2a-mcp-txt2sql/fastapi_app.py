@@ -3,17 +3,15 @@ FastAPI backend for A2A MCP SQL Chat application.
 Replaces Streamlit to solve async/event loop issues.
 """
 
-import asyncio
 import uuid
-from datetime import datetime
-from typing import Dict, List, Optional
 from contextlib import asynccontextmanager
+from datetime import datetime
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-import uvicorn
 
 from enhanced_orchestrator import EnhancedSQLOrchestrator, State
 
@@ -22,29 +20,29 @@ from enhanced_orchestrator import EnhancedSQLOrchestrator, State
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
     content: str
-    sql_query: Optional[str] = None
+    sql_query: str | None = None
     timestamp: str
 
 
 class QueryRequest(BaseModel):
     message: str
-    thread_id: Optional[str] = None
+    thread_id: str | None = None
 
 
 class QueryResponse(BaseModel):
     response: str
-    sql_query: Optional[str] = None
+    sql_query: str | None = None
     thread_id: str
     timestamp: str
 
 
 class ChatHistoryResponse(BaseModel):
-    messages: List[ChatMessage]
+    messages: list[ChatMessage]
     thread_id: str
 
 
 # Global orchestrator instance
-orchestrator: Optional[EnhancedSQLOrchestrator] = None
+orchestrator: EnhancedSQLOrchestrator | None = None
 
 
 @asynccontextmanager
@@ -54,13 +52,13 @@ async def lifespan(app: FastAPI):
     global orchestrator
     print("🚀 Starting FastAPI server...")
     print("🔄 Initializing Enhanced SQL Orchestrator...")
-    
+
     orchestrator = EnhancedSQLOrchestrator()
     await orchestrator.initialize()
     print("✅ FastAPI server ready!")
-    
+
     yield
-    
+
     # Shutdown
     print("🔄 Shutting down...")
     if orchestrator:
@@ -80,7 +78,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # In-memory chat history (in production, use a database)
-chat_sessions: Dict[str, List[ChatMessage]] = {}
+chat_sessions: dict[str, list[ChatMessage]] = {}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -94,32 +92,32 @@ async def process_query(request: QueryRequest):
     """Process a user query through the orchestrator."""
     if not orchestrator:
         raise HTTPException(status_code=500, detail="Orchestrator not initialized")
-    
+
     # Generate thread ID if not provided
     thread_id = request.thread_id or str(uuid.uuid4())
-    
+
     try:
         # Process query through orchestrator
         final_state: State = await orchestrator.run(
             user_query=request.message,
             thread_id=thread_id
         )
-        
+
         response_content = final_state.get("final_response", "Sorry, an error occurred.")
         sql_query = final_state.get("sql_query")
         timestamp = datetime.now().isoformat()
-        
+
         # Store in chat history
         if thread_id not in chat_sessions:
             chat_sessions[thread_id] = []
-        
+
         # Add user message
         chat_sessions[thread_id].append(ChatMessage(
             role="user",
             content=request.message,
             timestamp=timestamp
         ))
-        
+
         # Add assistant response
         chat_sessions[thread_id].append(ChatMessage(
             role="assistant",
@@ -127,14 +125,14 @@ async def process_query(request: QueryRequest):
             sql_query=sql_query,
             timestamp=timestamp
         ))
-        
+
         return QueryResponse(
             response=response_content,
             sql_query=sql_query,
             thread_id=thread_id,
             timestamp=timestamp
         )
-        
+
     except Exception as e:
         print(f"❌ Query processing failed: {e}")
         raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
@@ -160,10 +158,10 @@ async def health_check():
     """Health check endpoint."""
     if not orchestrator:
         raise HTTPException(status_code=503, detail="Orchestrator not ready")
-    
+
     # Check MCP server health
     mcp_healthy = await orchestrator.sqlite_mcp.health_check()
-    
+
     return {
         "status": "healthy" if mcp_healthy else "degraded",
         "orchestrator": "ready",
@@ -175,7 +173,7 @@ async def health_check():
 # WebSocket endpoint for real-time chat (optional enhancement)
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: list[WebSocket] = []
 
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
@@ -199,33 +197,33 @@ async def websocket_endpoint(websocket: WebSocket, thread_id: str):
         while True:
             # Receive message from client
             data = await websocket.receive_text()
-            
+
             if not orchestrator:
                 await websocket.send_text("Error: Orchestrator not ready")
                 continue
-            
+
             try:
                 # Process query
                 final_state: State = await orchestrator.run(
                     user_query=data,
                     thread_id=thread_id
                 )
-                
+
                 response_content = final_state.get("final_response", "Sorry, an error occurred.")
                 sql_query = final_state.get("sql_query")
-                
+
                 # Send response back
                 response = {
                     "response": response_content,
                     "sql_query": sql_query,
                     "timestamp": datetime.now().isoformat()
                 }
-                
+
                 await websocket.send_json(response)
-                
+
             except Exception as e:
                 await websocket.send_text(f"Error: {str(e)}")
-                
+
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
@@ -233,7 +231,7 @@ async def websocket_endpoint(websocket: WebSocket, thread_id: str):
 if __name__ == "__main__":
     print("🎵 Starting SQL Chat AI FastAPI Server")
     print("📍 Open: http://localhost:8000")
-    
+
     uvicorn.run(
         "fastapi_app:app",
         host="0.0.0.0",

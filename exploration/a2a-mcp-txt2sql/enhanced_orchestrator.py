@@ -13,8 +13,8 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from agents.sql_validation_agent import SQLValidationAgent
-from mcp_servers.mcp_factory import create_mcp_interface
 from mcp_isolation import MCPIsolationLayer
+from mcp_servers.mcp_factory import create_mcp_interface
 
 
 class State(TypedDict):
@@ -38,7 +38,7 @@ class EnhancedSQLOrchestrator:
         self.chroma_logger = None
         self.checkpointer = InMemorySaver()
         self.graph = None
-        
+
         # NEW: MCP Isolation Layer
         self.mcp_isolation = MCPIsolationLayer()
 
@@ -48,10 +48,10 @@ class EnhancedSQLOrchestrator:
         self.sqlite_mcp = await create_mcp_interface("sqlite")
         self.chroma_logger = await create_mcp_interface("chroma")
         await self.validator.initialize()
-        
+
         # Register MCP servers with isolation layer
         self.mcp_isolation.register_server("sqlite", self.sqlite_mcp)
-        
+
         self.graph = self._build_graph()
 
     def _build_graph(self):
@@ -184,14 +184,14 @@ Example: SELECT COUNT(*) FROM Artist"""
                 "final_response": "Database connection error - please try again",
                 "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_failed"]
             }
-        
+
         try:
             # Execute through clean isolation layer
             mcp_response = await self.mcp_isolation.execute_sql_query(state)
-            
+
             if mcp_response.success:
                 mcp_servers_used = state.get("mcp_servers_used", []) + ["sqlite_mcp_isolated"]
-                
+
                 return {
                     **state,
                     "sql_result": mcp_response.content,
@@ -247,7 +247,7 @@ Example: SELECT COUNT(*) FROM Artist"""
 
         try:
             await self.chroma_logger.add_log(interaction_details)
-        except Exception as e:
+        except Exception:
             # Never let logging failures crash the main application
             pass
 
@@ -291,7 +291,7 @@ Example: SELECT COUNT(*) FROM Artist"""
             final_state = await self.graph.ainvoke(inputs, config)
             await self._log_interaction(final_state)
             return final_state
-            
+
         except Exception as e:
             print(f"❌ Enhanced Orchestrator - Run failed: {e}")
             import traceback
