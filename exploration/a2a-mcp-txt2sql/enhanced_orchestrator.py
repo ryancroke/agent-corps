@@ -20,11 +20,15 @@ from mcp_servers.mcp_factory import create_mcp_interface
 class State(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
     user_query: str
+    query_type: str  # "sql", "memory", "direct"
     needs_sql: bool
+    needs_memory: bool
     sql_query: str
+    memory_query: str
     is_valid: bool
     validation_result: dict
     sql_result: str
+    memory_result: str
     final_response: str
     mcp_servers_used: list[str]
     agents_used: list[str]
@@ -51,6 +55,7 @@ class EnhancedSQLOrchestrator:
 
         # Register MCP servers with isolation layer
         self.mcp_isolation.register_server("sqlite", self.sqlite_mcp)
+        self.mcp_isolation.register_server("chroma", self.chroma_logger)
 
         self.graph = self._build_graph()
 
@@ -64,16 +69,17 @@ class EnhancedSQLOrchestrator:
         graph.add_node("generate_sql", self._generate_sql)
         graph.add_node("validate_sql", self._validate_sql)
         graph.add_node("execute_sql", self._execute_sql)
+        graph.add_node("search_memory", self._search_memory)
         graph.add_node("direct_response", self._direct_response)
 
         graph.set_entry_point("contextualize")
         graph.add_edge("contextualize", "initialize_state")
         graph.add_edge("initialize_state", "route")
 
-        # Routing logic
+        # 3-way routing logic
         graph.add_conditional_edges(
             "route",
-            lambda state: "generate_sql" if state["needs_sql"] else "direct_response"
+            self._route_decision
         )
 
         graph.add_edge("generate_sql", "validate_sql")
@@ -85,16 +91,57 @@ class EnhancedSQLOrchestrator:
         )
 
         graph.add_edge("execute_sql", END)
+        graph.add_edge("search_memory", END)
         graph.add_edge("direct_response", END)
 
         return graph.compile(checkpointer=self.checkpointer)
 
     async def _route_query(self, state: State) -> State:
-        """Decide if query needs SQL."""
-        prompt = f"Does this query need database access? Answer only 'yes' or 'no': {state['user_query']}"
-        response = await self.llm.ainvoke(prompt)
-        needs_sql = "yes" in response.content.lower()
-        return {**state, "needs_sql": needs_sql}
+        """Decide query type: SQL, memory search, or direct response."""
+        query = state['user_query']
+        
+        routing_prompt = f"""
+        Analyze this user query and determine the best routing:
+        
+        Query: {query}
+        
+        Choose ONE of these options:
+        - SQL: Query needs database access (artists, albums, tracks, sales data)
+        - MEMORY: Query asks about previous conversations, history, or similar interactions
+        - DIRECT: General question that needs a direct LLM response
+        
+        Examples:
+        - "How many artists are there?" → SQL
+        - "What did we talk about earlier?" → MEMORY  
+        - "Show me similar questions I've asked" → MEMORY
+        - "What is Python?" → DIRECT
+        
+        Respond with exactly one word: SQL, MEMORY, or DIRECT
+        """
+        
+        response = await self.llm.ainvoke(routing_prompt)
+        route_decision = response.content.strip().upper()
+        
+        # Set routing flags
+        needs_sql = route_decision == "SQL"
+        needs_memory = route_decision == "MEMORY"
+        query_type = route_decision.lower()
+        
+        return {
+            **state, 
+            "needs_sql": needs_sql,
+            "needs_memory": needs_memory,
+            "query_type": query_type
+        }
+
+    def _route_decision(self, state: State) -> str:
+        """Route based on query type."""
+        if state["needs_sql"]:
+            return "generate_sql"
+        elif state["needs_memory"]:
+            return "search_memory"
+        else:
+            return "direct_response"
 
 
     async def _contextualize_query(self, state: State) -> State:
@@ -186,25 +233,18 @@ Example: SELECT COUNT(*) FROM Artist"""
             }
 
         try:
-            # Execute through clean isolation layer
-            mcp_response = await self.mcp_isolation.execute_sql_query(state)
+            # Use factory interface directly - much simpler!
+            sql_task = f"Execute this SQL query: {state['sql_query']}"
+            result = await self.sqlite_mcp.query(sql_task)
 
-            if mcp_response.success:
-                mcp_servers_used = state.get("mcp_servers_used", []) + ["sqlite_mcp_isolated"]
+            mcp_servers_used = state.get("mcp_servers_used", []) + ["sqlite_mcp_direct"]
 
-                return {
-                    **state,
-                    "sql_result": mcp_response.content,
-                    "final_response": mcp_response.content,
-                    "mcp_servers_used": mcp_servers_used
-                }
-            else:
-                return {
-                    **state,
-                    "sql_result": f"Execution error: {mcp_response.error_message}",
-                    "final_response": f"Database query failed: {mcp_response.error_message}",
-                    "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_isolated_error"]
-                }
+            return {
+                **state,
+                "sql_result": str(result),
+                "final_response": str(result),
+                "mcp_servers_used": mcp_servers_used
+            }
         except Exception as e:
             print(f"❌ SQL execution failed: {e}")
             return {
@@ -212,6 +252,41 @@ Example: SELECT COUNT(*) FROM Artist"""
                 "sql_result": f"Execution error: {str(e)}",
                 "final_response": f"Database query failed: {str(e)}",
                 "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_error"]
+            }
+
+    async def _search_memory(self, state: State) -> State:
+        """Search ChromaDB for relevant past interactions using direct factory interface."""
+        try:
+            # Simple, direct query to ChromaDB MCP
+            search_query = f"Search the system_interactions collection for content related to: {state['user_query']}"
+            
+            # Use factory interface directly - no complex isolation layer
+            result = await self.chroma_logger.query(search_query)
+            
+            mcp_servers_used = state.get("mcp_servers_used", []) + ["chroma_mcp_direct"]
+            
+            # Format the memory results
+            if result and len(str(result).strip()) > 10:  # Basic result check
+                memory_response = f"Based on your previous interactions:\n\n{result}"
+            else:
+                memory_response = "I don't have any relevant previous interactions to reference for this query."
+            
+            return {
+                **state,
+                "memory_query": search_query,
+                "memory_result": str(result),
+                "final_response": memory_response,
+                "mcp_servers_used": mcp_servers_used
+            }
+            
+        except Exception as e:
+            print(f"❌ ChromaDB direct query failed: {e}")
+            return {
+                **state,
+                "memory_query": f"Search for: {state['user_query']}",
+                "memory_result": f"Error: {str(e)}",
+                "final_response": "I'm having trouble accessing my memory right now. Please try again.",
+                "mcp_servers_used": state.get("mcp_servers_used", []) + ["chroma_mcp_error"]
             }
 
     async def _direct_response(self, state: State) -> State:
@@ -260,11 +335,15 @@ Example: SELECT COUNT(*) FROM Artist"""
         # but are required by downstream nodes.
         required_keys = {
             "standalone_query": "",
+            "query_type": "direct",
             "needs_sql": False,
+            "needs_memory": False,
             "sql_query": "",
+            "memory_query": "",
             "is_valid": False,
             "validation_result": {},
             "sql_result": "",
+            "memory_result": "",
             "final_response": "",
             "mcp_servers_used": [],
             "agents_used": []
