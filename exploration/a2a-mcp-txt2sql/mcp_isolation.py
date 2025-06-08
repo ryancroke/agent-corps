@@ -140,7 +140,35 @@ class MCPIsolationLayer:
         # Step 3: Execute with clean context
         try:
             print(f"🔄 Executing query via isolated SQLite MCP server")
-            response = await sqlite_server.execute_query(context)
+            
+            # Create clean task description from context
+            task_description = f"Execute this SQL query: {context.sql_query}"
+            
+            # Use the factory-created interface's query method
+            result = await sqlite_server.query(task_description)
+            
+            # Check for error indicators in the response
+            error_indicators = ["error", "failed", "cannot", "unable", "exception", "invalid", "issue", "problem", "try again"]
+            result_lower = str(result).lower()
+            found_errors = [indicator for indicator in error_indicators if indicator in result_lower]
+            
+            if found_errors:
+                response = MCPResponse(
+                    success=False,
+                    content=str(result),
+                    error_message=f"Query execution returned error indicators: {found_errors}",
+                    metadata={"error_indicators": found_errors}
+                )
+            else:
+                response = MCPResponse(
+                    success=True,
+                    content=str(result),
+                    metadata={
+                        "query_executed": context.sql_query,
+                        "execution_method": "factory_interface"
+                    }
+                )
+            
             print(f"✅ SQL execution completed - Success: {response.success}")
             return response
             

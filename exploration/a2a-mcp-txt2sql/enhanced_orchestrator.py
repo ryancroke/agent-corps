@@ -13,8 +13,7 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from agents.sql_validation_agent import SQLValidationAgent
-from mcp_servers.chroma_interface import ChromaMCP
-from mcp_servers.sqlite_interface import SQLiteMCP
+from mcp_servers.mcp_factory import create_mcp_interface
 from mcp_isolation import MCPIsolationLayer
 
 
@@ -34,9 +33,9 @@ class State(TypedDict):
 class EnhancedSQLOrchestrator:
     def __init__(self):
         self.llm = ChatOpenAI(model="gpt-4o-mini", temperature=0)
-        self.sqlite_mcp = SQLiteMCP()
+        self.sqlite_mcp = None
         self.validator = SQLValidationAgent()
-        self.chroma_logger = ChromaMCP()
+        self.chroma_logger = None
         self.checkpointer = InMemorySaver()
         self.graph = None
         
@@ -45,9 +44,10 @@ class EnhancedSQLOrchestrator:
 
     async def initialize(self):
         """Initialize all components."""
-        await self.sqlite_mcp.initialize()
+        # Use factory to create MCP interfaces directly
+        self.sqlite_mcp = await create_mcp_interface("sqlite")
+        self.chroma_logger = await create_mcp_interface("chroma")
         await self.validator.initialize()
-        await self.chroma_logger.initialize()
         
         # Register MCP servers with isolation layer
         self.mcp_isolation.register_server("sqlite", self.sqlite_mcp)
@@ -300,8 +300,10 @@ Example: SELECT COUNT(*) FROM Artist"""
 
     async def close(self):
         """Clean up resources."""
-        await self.sqlite_mcp.close()
-        await self.chroma_logger.close()
+        if self.sqlite_mcp:
+            await self.sqlite_mcp.close()
+        if self.chroma_logger:
+            await self.chroma_logger.close()
 
 
 # Test function
@@ -310,16 +312,16 @@ async def test():
     await orchestrator.initialize()
 
     # Test valid SQL query
-    result = await orchestrator.run("How many artists are in the database?")
-    print(f"Valid query result: {result[:100]}...")
+    result = await orchestrator.run("How many artists are in the database?", "test-thread-1")
+    print(f"Valid query result: {result.get('final_response', 'No response')[:100]}...")
 
     # Test dangerous SQL
-    result = await orchestrator.run("DROP TABLE Artist")
-    print(f"Dangerous query result: {result}")
+    result = await orchestrator.run("DROP TABLE Artist", "test-thread-2")
+    print(f"Dangerous query result: {result.get('final_response', 'No response')}")
 
     # Test non-SQL query
-    result = await orchestrator.run("What is Python?")
-    print(f"Non-SQL result: {result[:100]}...")
+    result = await orchestrator.run("What is Python?", "test-thread-3")
+    print(f"Non-SQL result: {result.get('final_response', 'No response')[:100]}...")
 
     await orchestrator.close()
 

@@ -157,12 +157,11 @@ async def test_mcp_isolation_layer():
     """Test the MCP isolation layer directly."""
     print("\n🔍 Testing MCP isolation layer directly...")
     
-    from mcp_servers.sqlite_interface import SQLiteMCP
+    from mcp_servers.mcp_factory import create_mcp_interface
     from mcp_isolation import MCPIsolationLayer, MCPQueryContext
     
-    # Create components
-    sqlite_mcp = SQLiteMCP()
-    await sqlite_mcp.initialize()
+    # Create components using factory
+    sqlite_mcp = await create_mcp_interface("sqlite")
     
     isolation_layer = MCPIsolationLayer()
     isolation_layer.register_server("sqlite", sqlite_mcp)
