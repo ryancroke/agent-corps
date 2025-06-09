@@ -44,13 +44,19 @@
 uv sync
 ```
 
-### 2. Start the Application
+### 2. Install DENO (for python REPL)
+
+```bash
+curl -fsSL https://deno.land/install.sh | sh
+```
+
+### 3. Start the Application
 
 ```bash
 uv run fastapi_app.py
 ```
 
-### 3. Open Your Browser
+### 4. Open Your Browser
 
 Navigate to: http://localhost:8000
 

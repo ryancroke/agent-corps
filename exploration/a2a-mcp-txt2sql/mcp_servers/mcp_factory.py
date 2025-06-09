@@ -5,6 +5,7 @@ Eliminates duplicate code across MCP server implementations.
 
 import asyncio
 import json
+import os
 import uuid
 from datetime import datetime
 
@@ -13,6 +14,44 @@ from langchain_openai import ChatOpenAI
 from mcp_use import MCPAgent, MCPClient
 
 load_dotenv()
+
+
+def resolve_config_paths(server_config: dict, project_root: str = None) -> dict:
+    """
+    Resolve relative paths in MCP server configuration to absolute paths.
+    
+    Args:
+        server_config: MCP server configuration dictionary
+        project_root: Project root directory (defaults to current working directory)
+    
+    Returns:
+        Updated configuration with absolute paths
+    """
+    if project_root is None:
+        # Get project root (directory containing this script's parent's parent)
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+    
+    # Deep copy to avoid modifying original config
+    import copy
+    resolved_config = copy.deepcopy(server_config)
+    
+    # Path-related argument flags that need resolution
+    path_flags = ["--db-path", "--data-dir", "--file", "--path", "--directory"]
+    
+    for server_name, server_info in resolved_config.get("mcpServers", {}).items():
+        if "args" in server_info:
+            args = server_info["args"]
+            for i, arg in enumerate(args):
+                # Check if this argument follows a path flag
+                if i > 0 and args[i-1] in path_flags:
+                    # Convert relative path to absolute path
+                    if not os.path.isabs(arg):
+                        absolute_path = os.path.join(project_root, arg)
+                        resolved_config["mcpServers"][server_name]["args"][i] = absolute_path
+                        print(f"✓ Resolved path: {arg} -> {absolute_path}")
+    
+    return resolved_config
 
 
 class MCPInterface:
@@ -118,8 +157,11 @@ async def create_mcp_interface(
             }
         }
 
+        # Resolve relative paths to absolute paths
+        resolved_config = resolve_config_paths(server_config)
+
         # Create using mcp-use pattern with configurable parameters
-        client = MCPClient.from_dict(server_config)
+        client = MCPClient.from_dict(resolved_config)
         llm = ChatOpenAI(model=model, temperature=temperature)
         agent = MCPAgent(llm=llm, client=client, max_steps=max_steps)
 

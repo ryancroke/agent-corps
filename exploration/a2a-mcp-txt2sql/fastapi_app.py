@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from enhanced_orchestrator import EnhancedSQLOrchestrator, State
+from data.chroma.create_db import create_chroma_db
 
 
 # Pydantic models for API
@@ -51,8 +52,17 @@ async def lifespan(app: FastAPI):
     # Startup
     global orchestrator
     print("🚀 Starting FastAPI server...")
+    
+    # Initialize ChromaDB first
+    print("🔄 Initializing ChromaDB...")
+    try:
+        create_chroma_db()
+        print("✅ ChromaDB initialized successfully!")
+    except Exception as e:
+        print(f"⚠️  ChromaDB initialization warning: {e}")
+        print("   Continuing with startup...")
+    
     print("🔄 Initializing Enhanced SQL Orchestrator...")
-
     orchestrator = EnhancedSQLOrchestrator()
     await orchestrator.initialize()
     print("✅ FastAPI server ready!")
