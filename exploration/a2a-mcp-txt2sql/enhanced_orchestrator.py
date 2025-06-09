@@ -15,6 +15,7 @@ from langgraph.graph.message import add_messages
 from agents.sql_validation_agent import SQLValidationAgent
 from mcp_isolation import MCPIsolationLayer
 from mcp_servers.mcp_factory import create_mcp_interface
+from data.chroma.create_db import create_chroma_db, add_interaction
 
 
 class State(TypedDict):
@@ -40,6 +41,8 @@ class EnhancedSQLOrchestrator:
         self.sqlite_mcp = None
         self.validator = SQLValidationAgent()
         self.chroma_logger = None
+        self.chroma_client = None
+        self.chroma_collection = None
         self.checkpointer = InMemorySaver()
         self.graph = None
 
@@ -51,6 +54,10 @@ class EnhancedSQLOrchestrator:
         # Use factory to create MCP interfaces directly
         self.sqlite_mcp = await create_mcp_interface("sqlite")
         self.chroma_logger = await create_mcp_interface("chroma")
+        
+        # Initialize direct ChromaDB connection for logging
+        self.chroma_client, self.chroma_collection = create_chroma_db()
+        
         await self.validator.initialize()
 
         # Register MCP servers with isolation layer
@@ -302,28 +309,23 @@ Example: SELECT COUNT(*) FROM Artist"""
 
 
     async def _log_interaction(self, final_state: State):
-        """Logs the complete interaction details to ChromaDB."""
-        # We use .get() for optional fields to avoid KeyErrors
-        mcp_used = final_state.get("mcp_servers_used", [])
-        agents_used = final_state.get("agents_used", [])
-
-        interaction_details = {
-            "user_query": final_state.get("user_query"),
-            "response": final_state.get("final_response"),
-            "mcp_servers_used": mcp_used,
-            "agents_used": agents_used,
-            "sql_generated": final_state.get("sql_query"),
-            "validation_result": final_state.get("validation_result"),
-            'timestamp': datetime.now().isoformat()
-
-            # Add any other relevant details from the state
-        }
-
-
+        """Logs the complete interaction details to ChromaDB using the tested add_interaction function."""
         try:
-            await self.chroma_logger.add_log(interaction_details)
-        except Exception:
+            # Use the working add_interaction function directly
+            add_interaction(
+                collection=self.chroma_collection,
+                user_query=final_state.get("user_query", ""),
+                response=final_state.get("final_response", ""),
+                mcp_servers=final_state.get("mcp_servers_used", []),
+                agents=final_state.get("agents_used", []),
+                sql_generated=final_state.get("sql_query"),
+                validation_result=final_state.get("validation_result")
+            )
+            print(f"✓ Logged interaction to ChromaDB using add_interaction")
+            
+        except Exception as e:
             # Never let logging failures crash the main application
+            print(f"⚠️ ChromaDB logging failed: {e}")
             pass
 
     async def _initialize_state(self, state: State) -> State:
