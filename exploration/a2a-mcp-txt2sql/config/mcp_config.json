@@ -4,11 +4,11 @@
       "command": "uv",
       "args": [
         "--directory",
-        "/Users/ryanhaptiq/Projects/mcp-streamlit-demo/exploration/a2a-mcp-txt2sql/mcp_servers/mcp_servers_official/src/sqlite",
+        "mcp_servers/mcp_servers_official/src/sqlite",
         "run",
         "mcp-server-sqlite",
         "--db-path",
-        "/Users/ryanhaptiq/Projects/mcp-streamlit-demo/exploration/a2a-mcp-txt2sql/data/Chinook_Sqlite.db"
+        "data/Chinook_Sqlite.db"
       ]
     },
     "python_repl": {
