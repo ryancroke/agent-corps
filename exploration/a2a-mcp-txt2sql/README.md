@@ -2,6 +2,7 @@
 
 **sophisticated AI-powered chat interface for exploring the Chinook music database using Agent-to-Agent (A2A) validation and Model Context Protocol (MCP) servers.**
 
+![SQL Chat App](docs/app_ui.png)
 ## Features
 
 ### **Intelligent SQL Generation & Validation**
@@ -170,7 +171,8 @@ custom_mcp = await create_mcp_interface("new_server", temperature=0.2, max_steps
 ├── docs/                    # Documentation
 │   ├── ARCHITECTURE.md      # Technical architecture details
 │   ├── ADDING_MCP_SERVERS.md # Guide for adding MCP servers
-│   └── ADDING_A2A_AGENTS.md # Guide for adding A2A agents
+│   ├── ADDING_A2A_AGENTS.md # Guide for adding A2A agents
+│   └── A2A_PROPOSAL.md      # Expansion proposal for business platform
 └── tests/                   # Test files
     ├── test_app_flow.py     # Integration tests
     ├── simple_mcp_test.py   # MCP connectivity tests
