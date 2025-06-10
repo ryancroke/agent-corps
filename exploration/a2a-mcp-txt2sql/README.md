@@ -73,6 +73,11 @@ Navigate to: http://localhost:8000
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed technical architecture.
 
+## Extension Guides
+
+- 📚 [Adding MCP Servers](docs/ADDING_MCP_SERVERS.md) - Integrate new data sources and external services
+- 🤖 [Adding A2A Agents](docs/ADDING_A2A_AGENTS.md) - Create intelligent workflow agents
+
 ### **Backend Components**
 
 #### FastAPI Application
@@ -163,7 +168,9 @@ custom_mcp = await create_mcp_interface("new_server", temperature=0.2, max_steps
 ├── data/
 │   └── Chinook_Sqlite.db    # Music database
 ├── docs/                    # Documentation
-│   └── ARCHITECTURE.md      # Technical architecture details
+│   ├── ARCHITECTURE.md      # Technical architecture details
+│   ├── ADDING_MCP_SERVERS.md # Guide for adding MCP servers
+│   └── ADDING_A2A_AGENTS.md # Guide for adding A2A agents
 └── tests/                   # Test files
     ├── test_app_flow.py     # Integration tests
     ├── simple_mcp_test.py   # MCP connectivity tests
