@@ -19,11 +19,11 @@ load_dotenv()
 def resolve_config_paths(server_config: dict, project_root: str = None) -> dict:
     """
     Resolve relative paths in MCP server configuration to absolute paths.
-    
+
     Args:
         server_config: MCP server configuration dictionary
         project_root: Project root directory (defaults to current working directory)
-    
+
     Returns:
         Updated configuration with absolute paths
     """
@@ -31,26 +31,29 @@ def resolve_config_paths(server_config: dict, project_root: str = None) -> dict:
         # Get project root (directory containing this script's parent's parent)
         script_dir = os.path.dirname(os.path.abspath(__file__))
         project_root = os.path.dirname(script_dir)
-    
+
     # Deep copy to avoid modifying original config
     import copy
+
     resolved_config = copy.deepcopy(server_config)
-    
+
     # Path-related argument flags that need resolution
     path_flags = ["--db-path", "--data-dir", "--file", "--path", "--directory"]
-    
+
     for server_name, server_info in resolved_config.get("mcpServers", {}).items():
         if "args" in server_info:
             args = server_info["args"]
             for i, arg in enumerate(args):
                 # Check if this argument follows a path flag
-                if i > 0 and args[i-1] in path_flags:
+                if i > 0 and args[i - 1] in path_flags:
                     # Convert relative path to absolute path
                     if not os.path.isabs(arg):
                         absolute_path = os.path.join(project_root, arg)
-                        resolved_config["mcpServers"][server_name]["args"][i] = absolute_path
+                        resolved_config["mcpServers"][server_name]["args"][i] = (
+                            absolute_path
+                        )
                         print(f"✓ Resolved path: {arg} -> {absolute_path}")
-    
+
     return resolved_config
 
 
@@ -91,7 +94,9 @@ class MCPInterface:
         try:
             # Try a simple operation - customize per server type if needed
             if self.server_name == "sqlite":
-                result = await self.agent.run("List the names of all tables in the database")
+                result = await self.agent.run(
+                    "List the names of all tables in the database"
+                )
             elif self.server_name == "chroma":
                 result = await self.agent.run("List available collections")
             else:
@@ -108,9 +113,13 @@ class MCPInterface:
         return {
             "server_name": self.server_name,
             "connection_id": self.connection_id,
-            "initialized_at": self.initialized_at.isoformat() if self.initialized_at else None,
+            "initialized_at": self.initialized_at.isoformat()
+            if self.initialized_at
+            else None,
             "query_count": self.query_count,
-            "last_query_time": self.last_query_time.isoformat() if self.last_query_time else None,
+            "last_query_time": self.last_query_time.isoformat()
+            if self.last_query_time
+            else None,
             "client_connected": self.client is not None,
             "agent_available": self.agent is not None,
             "client_id": id(self.client) if self.client else None,
@@ -128,18 +137,18 @@ async def create_mcp_interface(
     config_path: str = "config/mcp_config.json",
     model: str = "gpt-4o-mini",
     temperature: float = 0,
-    max_steps: int = 45
+    max_steps: int = 45,
 ) -> MCPInterface:
     """
     Create any MCP interface from config with customizable parameters.
-    
+
     Args:
         server_name: Name of the server in mcp_config.json (e.g., "sqlite", "chroma")
         config_path: Path to the MCP configuration file
         model: LLM model to use for the agent
         temperature: Temperature setting for the LLM
         max_steps: Maximum steps the agent can take
-    
+
     Returns:
         MCPInterface: Initialized MCP interface ready to use
     """
@@ -149,12 +158,12 @@ async def create_mcp_interface(
             full_config = json.load(f)
 
         if server_name not in full_config["mcpServers"]:
-            raise ValueError(f"Server '{server_name}' not found in config. Available: {list(full_config['mcpServers'].keys())}")
+            raise ValueError(
+                f"Server '{server_name}' not found in config. Available: {list(full_config['mcpServers'].keys())}"
+            )
 
         server_config = {
-            "mcpServers": {
-                server_name: full_config["mcpServers"][server_name]
-            }
+            "mcpServers": {server_name: full_config["mcpServers"][server_name]}
         }
 
         # Resolve relative paths to absolute paths
@@ -188,11 +197,7 @@ async def test_mcp_factory():
 
     # Test Chroma MCP with different parameters
     print("\n--- TEST: Chroma MCP ---")
-    chroma_mcp = await create_mcp_interface(
-        "chroma",
-        model="gpt-4o-mini",
-        max_steps=20
-    )
+    chroma_mcp = await create_mcp_interface("chroma", model="gpt-4o-mini", max_steps=20)
     health = await chroma_mcp.health_check()
     print(f"Chroma Health: {health}")
     print(f"Chroma Connection Info: {chroma_mcp.get_connection_info()}")

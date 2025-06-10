@@ -14,12 +14,16 @@ class SQLValidationAgent:
     def __init__(self):
         self.agent_id = "sql-validator-001"
         self.server_params = StdioServerParameters(
-            command='deno',
+            command="deno",
             args=[
-                'run', '-N', '-R=node_modules', '-W=node_modules',
-                '--node-modules-dir=auto',
-                'jsr:@pydantic/mcp-run-python', 'stdio'
-            ]
+                "run",
+                "-N",
+                "-R=node_modules",
+                "-W=node_modules",
+                "--node-modules-dir=auto",
+                "jsr:@pydantic/mcp-run-python",
+                "stdio",
+            ],
         )
 
     async def initialize(self):
@@ -40,20 +44,23 @@ class SQLValidationAgent:
                     "input_schema": {
                         "type": "object",
                         "properties": {
-                            "sql": {"type": "string", "description": "SQL query to validate"}
+                            "sql": {
+                                "type": "string",
+                                "description": "SQL query to validate",
+                            }
                         },
-                        "required": ["sql"]
+                        "required": ["sql"],
                     },
                     "output_schema": {
                         "type": "object",
                         "properties": {
                             "is_valid": {"type": "boolean"},
                             "issues": {"type": "array", "items": {"type": "string"}},
-                            "safe": {"type": "boolean"}
-                        }
-                    }
+                            "safe": {"type": "boolean"},
+                        },
+                    },
                 }
-            ]
+            ],
         }
 
     async def validate_sql(self, sql: str) -> dict[str, Any]:
@@ -100,7 +107,9 @@ result
             async with stdio_client(self.server_params) as (read, write):
                 async with ClientSession(read, write) as session:
                     await session.initialize()
-                    result = await session.call_tool('run_python_code', {'python_code': validation_code})
+                    result = await session.call_tool(
+                        "run_python_code", {"python_code": validation_code}
+                    )
 
                     # Debug: print the raw output
                     output = result.content[0].text
@@ -115,14 +124,26 @@ result
                         if "'is_valid': True" in result_line:
                             return {"is_valid": True, "issues": [], "safe": True}
                         else:
-                            return {"is_valid": False, "issues": ["Validation failed"], "safe": False}
+                            return {
+                                "is_valid": False,
+                                "issues": ["Validation failed"],
+                                "safe": False,
+                            }
                     else:
                         print("DEBUG - No VALIDATION_RESULT found in output")
-                        return {"is_valid": False, "issues": ["Could not parse result"], "safe": False}
+                        return {
+                            "is_valid": False,
+                            "issues": ["Could not parse result"],
+                            "safe": False,
+                        }
 
         except Exception as e:
             print(f"DEBUG - Exception in validate_sql: {e}")
-            return {"is_valid": False, "issues": [f"MCP error: {str(e)}"], "safe": False}
+            return {
+                "is_valid": False,
+                "issues": [f"MCP error: {str(e)}"],
+                "safe": False,
+            }
 
     async def process_a2a_message(self, message: dict[str, Any]) -> dict[str, Any]:
         """Process A2A task message."""
@@ -132,10 +153,7 @@ result
             sql = message.get("task", {}).get("parameters", {}).get("sql")
             result = await self.validate_sql(sql)
 
-            return {
-                "status": "completed",
-                "artifacts": [result]
-            }
+            return {"status": "completed", "artifacts": [result]}
 
         return {"status": "failed", "error": "Unknown task"}
 

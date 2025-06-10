@@ -71,6 +71,8 @@ Navigate to: http://localhost:8000
 
 ## Architecture
 
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for detailed technical architecture.
+
 ### **Backend Components**
 
 #### FastAPI Application
@@ -144,23 +146,28 @@ custom_mcp = await create_mcp_interface("new_server", temperature=0.2, max_steps
 
 ```
 .
-├── fastapi_app.py # Main FastAPI application
-├── enhanced_orchestrator.py # LangGraph orchestration logic
-├── mcp_isolation.py # Clean MCP server interface
+├── fastapi_app.py             # Main FastAPI application
+├── enhanced_orchestrator.py   # LangGraph orchestration logic
+├── mcp_isolation.py          # Clean MCP server interface
 ├── agents/
 │   └── sql_validation_agent.py # A2A validation agent
 ├── mcp_servers/
-│   ├── sqlite_interface.py # SQLite MCP client
-│   └── chroma_interface.py # ChromaDB MCP client
-├── static/ # Frontend assets
-│   ├── index.html # Main web interface
-│   ├── styles.css # Beautiful styling
-│   └── app.js # Interactive JavaScript
+│   └── mcp_factory.py        # MCP factory pattern implementation
+├── static/                   # Frontend assets
+│   ├── index.html           # Main web interface
+│   ├── styles.css           # Beautiful styling
+│   └── app.js               # Interactive JavaScript
 ├── config/
-│   ├── mcp_config.json # MCP server configuration
-│   └── settings.yaml # Application settings
-└── data/
-    └── Chinook_Sqlite.db # Music database
+│   ├── mcp_config.json      # MCP server configuration
+│   └── settings.yaml        # Application settings
+├── data/
+│   └── Chinook_Sqlite.db    # Music database
+├── docs/                    # Documentation
+│   └── ARCHITECTURE.md      # Technical architecture details
+└── tests/                   # Test files
+    ├── test_app_flow.py     # Integration tests
+    ├── simple_mcp_test.py   # MCP connectivity tests
+    └── diagnostic_mcp.py    # MCP diagnostic tool
 ```
 
 ## Configuration
@@ -206,11 +213,17 @@ ruff check --fix .
 # Test MCP factory pattern
 uv run mcp_servers/mcp_factory.py
 
-# Test enhanced orchestrator with factory
+# Test enhanced orchestrator
 uv run enhanced_orchestrator.py
 
-# Test application flow
-uv run test_app_flow.py
+# Run integration tests
+uv run tests/test_app_flow.py
+
+# Run MCP connectivity tests
+uv run tests/simple_mcp_test.py
+
+# Run diagnostic tests
+uv run tests/diagnostic_mcp.py
 ```
 
 ## Troubleshooting

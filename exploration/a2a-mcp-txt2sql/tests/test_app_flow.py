@@ -1,6 +1,6 @@
 """
 Test that mimics our actual application flow to isolate the issue.
-Since the MCP server works fine in isolation, the problem must be in 
+Since the MCP server works fine in isolation, the problem must be in
 our application's usage pattern.
 """
 
@@ -20,7 +20,7 @@ async def test_orchestrator_single_query():
     try:
         result = await orchestrator.run(
             user_query="How many artists are in the database?",
-            thread_id=str(uuid.uuid4())
+            thread_id=str(uuid.uuid4()),
         )
 
         print("✅ Single orchestrator query succeeded")
@@ -46,7 +46,7 @@ async def test_orchestrator_multiple_queries_same_thread():
     queries = [
         "How many artists are in the database?",
         "How many albums are in the database?",
-        "How many tracks are in the database?"
+        "How many tracks are in the database?",
     ]
 
     try:
@@ -55,17 +55,20 @@ async def test_orchestrator_multiple_queries_same_thread():
 
             result = await orchestrator.run(
                 user_query=query,
-                thread_id=thread_id  # Same thread ID
+                thread_id=thread_id,  # Same thread ID
             )
 
             print(f"✅ Query {i} succeeded")
-            print(f"📄 Response: {result.get('final_response', 'No response')[:100]}...")
+            print(
+                f"📄 Response: {result.get('final_response', 'No response')[:100]}..."
+            )
 
         return True
 
     except Exception as e:
         print(f"❌ Orchestrator query failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -83,7 +86,7 @@ async def test_orchestrator_multiple_queries_different_threads():
     queries = [
         "How many artists are in the database?",
         "How many albums are in the database?",
-        "How many tracks are in the database?"
+        "How many tracks are in the database?",
     ]
 
     try:
@@ -92,17 +95,20 @@ async def test_orchestrator_multiple_queries_different_threads():
 
             result = await orchestrator.run(
                 user_query=query,
-                thread_id=str(uuid.uuid4())  # Different thread ID each time
+                thread_id=str(uuid.uuid4()),  # Different thread ID each time
             )
 
             print(f"✅ Query {i} succeeded")
-            print(f"📄 Response: {result.get('final_response', 'No response')[:100]}...")
+            print(
+                f"📄 Response: {result.get('final_response', 'No response')[:100]}..."
+            )
 
         return True
 
     except Exception as e:
         print(f"❌ Orchestrator query failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -122,7 +128,7 @@ async def test_streamlit_simulation():
     queries = [
         "How many artists are in the database?",
         "How many albums are in the database?",
-        "How many tracks are in the database?"
+        "How many tracks are in the database?",
     ]
 
     try:
@@ -130,13 +136,12 @@ async def test_streamlit_simulation():
             print(f"\n📤 Streamlit-style Query {i}: {query}")
 
             # This mimics exactly what Streamlit does
-            result = await orchestrator.run(
-                user_query=query,
-                thread_id=thread_id
-            )
+            result = await orchestrator.run(user_query=query, thread_id=thread_id)
 
             print(f"✅ Query {i} succeeded")
-            print(f"📄 Response: {result.get('final_response', 'No response')[:100]}...")
+            print(
+                f"📄 Response: {result.get('final_response', 'No response')[:100]}..."
+            )
 
             # Simulate time between user interactions
             await asyncio.sleep(1)
@@ -146,6 +151,7 @@ async def test_streamlit_simulation():
     except Exception as e:
         print(f"❌ Streamlit simulation failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -170,7 +176,7 @@ async def test_mcp_isolation_layer():
     queries = [
         "SELECT COUNT(*) FROM Artist",
         "SELECT COUNT(*) FROM Album",
-        "SELECT COUNT(*) FROM Track"
+        "SELECT COUNT(*) FROM Track",
     ]
 
     try:
@@ -178,10 +184,7 @@ async def test_mcp_isolation_layer():
             print(f"\n📤 Isolation Layer Query {i}: {sql_query}")
 
             # Create mock LangGraph state
-            mock_state = {
-                "user_query": f"Query {i}",
-                "sql_query": sql_query
-            }
+            mock_state = {"user_query": f"Query {i}", "sql_query": sql_query}
 
             response = await isolation_layer.execute_sql_query(mock_state)
 
@@ -197,6 +200,7 @@ async def test_mcp_isolation_layer():
     except Exception as e:
         print(f"❌ Isolation layer test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
 
@@ -229,7 +233,9 @@ async def main():
 
                     if success5:
                         print("\n✅ All application flow tests passed!")
-                        print("🤔 The issue might be in specific query patterns or timing")
+                        print(
+                            "🤔 The issue might be in specific query patterns or timing"
+                        )
                     else:
                         print("\n❌ Isolation layer test failed")
                 else:
@@ -237,7 +243,9 @@ async def main():
             else:
                 print("\n❌ Multiple queries with different threads failed")
         else:
-            print("\n❌ Multiple queries with same thread failed - LangGraph state issue!")
+            print(
+                "\n❌ Multiple queries with same thread failed - LangGraph state issue!"
+            )
     else:
         print("\n❌ Single query through orchestrator failed")
 

@@ -10,8 +10,9 @@ from datetime import datetime
 import chromadb
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
-project_root = os.path.abspath(os.path.join(script_dir, '..', '..'))
+project_root = os.path.abspath(os.path.join(script_dir, "..", ".."))
 CHROMA_DB_PATH = os.path.join(project_root, "data", "chroma_db")
+
 
 def create_chroma_db():
     """Create ChromaDB collection for system interactions."""
@@ -22,7 +23,7 @@ def create_chroma_db():
     # Create collection with metadata
     collection = client.get_or_create_collection(
         name="system_interactions",
-        metadata={"description": "A2A MCP system interaction logs"}
+        metadata={"description": "A2A MCP system interaction logs"},
     )
 
     print(f"✓ Created collection: {collection.name}")
@@ -32,7 +33,9 @@ def create_chroma_db():
 
 
 # --- CORRECTED FUNCTION ---
-def add_interaction(collection, user_query, response, mcp_servers=None, agents=None, **kwargs):
+def add_interaction(
+    collection, user_query, response, mcp_servers=None, agents=None, **kwargs
+):
     """Add interaction to ChromaDB."""
 
     interaction_id = str(uuid.uuid4())
@@ -46,7 +49,7 @@ def add_interaction(collection, user_query, response, mcp_servers=None, agents=N
         # Safely convert lists to strings
         "mcp_servers_used": str(mcp_servers or []),
         "agents_used": str(agents or []),
-        "user_ip": kwargs.get("user_ip", "local")
+        "user_ip": kwargs.get("user_ip", "local"),
     }
 
     # Conditionally add optional fields ONLY if they have a value
@@ -68,11 +71,7 @@ def add_interaction(collection, user_query, response, mcp_servers=None, agents=N
         metadata["workflow_path"] = str(kwargs["workflow_path"])
 
     # Add to collection (query text as document for embedding)
-    collection.add(
-        documents=[user_query],
-        metadatas=[metadata],
-        ids=[interaction_id]
-    )
+    collection.add(documents=[user_query], metadatas=[metadata], ids=[interaction_id])
 
     print(f"✓ Added interaction: {interaction_id}")
     # For debugging, print the metadata that was just added
@@ -82,10 +81,7 @@ def add_interaction(collection, user_query, response, mcp_servers=None, agents=N
 def search_interactions(collection, query, n_results=5):
     """Search similar interactions."""
 
-    results = collection.query(
-        query_texts=[query],
-        n_results=n_results
-    )
+    results = collection.query(query_texts=[query], n_results=n_results)
 
     return results
 
@@ -103,7 +99,7 @@ if __name__ == "__main__":
         agents=["orchestrator", "sql_validator"],
         execution_time_ms=1250,
         sql_generated="SELECT COUNT(*) FROM Artist",
-        validation_result={"is_valid": True, "safe": True}
+        validation_result={"is_valid": True, "safe": True},
     )
 
     # Test an interaction with an error
@@ -112,12 +108,16 @@ if __name__ == "__main__":
         user_query="DROP TABLE *",
         response="I'm sorry, I cannot perform that action.",
         error="Disallowed SQL keyword 'DROP' detected.",
-        validation_result={"is_valid": False, "safe": False}
+        validation_result={"is_valid": False, "safe": False},
     )
 
     # Search test
     results = search_interactions(collection, "artists count")
-    print(f"\nFound {len(results['documents'][0])} similar interactions for 'artists count':")
-    for _doc, meta in zip(results['documents'][0], results['metadatas'][0], strict=False):
+    print(
+        f"\nFound {len(results['documents'][0])} similar interactions for 'artists count':"
+    )
+    for _doc, meta in zip(
+        results["documents"][0], results["metadatas"][0], strict=False
+    ):
         print(f"  - Query: {meta['user_query']}")
         print(f"    Response: {meta['response']}")

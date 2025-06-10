@@ -6,6 +6,7 @@ target-version = "py311"
 # Set line length to 88 (black default)
 line-length = 88
 
+[lint]
 # Enable specific linting rules
 select = [
     "E",   # pycodestyle errors

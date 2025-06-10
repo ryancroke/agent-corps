@@ -3,7 +3,6 @@ Enhanced orchestrator with A2A SQL validation.
 """
 
 import asyncio
-from datetime import datetime
 from typing import Annotated, TypedDict
 
 from langchain_core.messages import BaseMessage
@@ -13,9 +12,9 @@ from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
 from agents.sql_validation_agent import SQLValidationAgent
+from data.chroma.create_db import add_interaction, create_chroma_db
 from mcp_isolation import MCPIsolationLayer
 from mcp_servers.mcp_factory import create_mcp_interface
-from data.chroma.create_db import create_chroma_db, add_interaction
 
 
 class State(TypedDict):
@@ -54,10 +53,10 @@ class EnhancedSQLOrchestrator:
         # Use factory to create MCP interfaces directly
         self.sqlite_mcp = await create_mcp_interface("sqlite")
         self.chroma_logger = await create_mcp_interface("chroma")
-        
+
         # Initialize direct ChromaDB connection for logging
         self.chroma_client, self.chroma_collection = create_chroma_db()
-        
+
         await self.validator.initialize()
 
         # Register MCP servers with isolation layer
@@ -84,17 +83,14 @@ class EnhancedSQLOrchestrator:
         graph.add_edge("initialize_state", "route")
 
         # 3-way routing logic
-        graph.add_conditional_edges(
-            "route",
-            self._route_decision
-        )
+        graph.add_conditional_edges("route", self._route_decision)
 
         graph.add_edge("generate_sql", "validate_sql")
 
         # Validation routing
         graph.add_conditional_edges(
             "validate_sql",
-            lambda state: "execute_sql" if state["is_valid"] else "direct_response"
+            lambda state: "execute_sql" if state["is_valid"] else "direct_response",
         )
 
         graph.add_edge("execute_sql", END)
@@ -105,40 +101,40 @@ class EnhancedSQLOrchestrator:
 
     async def _route_query(self, state: State) -> State:
         """Decide query type: SQL, memory search, or direct response."""
-        query = state['user_query']
-        
+        query = state["user_query"]
+
         routing_prompt = f"""
         Analyze this user query and determine the best routing:
-        
+
         Query: {query}
-        
+
         Choose ONE of these options:
         - SQL: Query needs database access (artists, albums, tracks, sales data)
         - MEMORY: Query asks about previous conversations, history, or similar interactions
         - DIRECT: General question that needs a direct LLM response
-        
+
         Examples:
         - "How many artists are there?" → SQL
-        - "What did we talk about earlier?" → MEMORY  
+        - "What did we talk about earlier?" → MEMORY
         - "Show me similar questions I've asked" → MEMORY
         - "What is Python?" → DIRECT
-        
+
         Respond with exactly one word: SQL, MEMORY, or DIRECT
         """
-        
+
         response = await self.llm.ainvoke(routing_prompt)
         route_decision = response.content.strip().upper()
-        
+
         # Set routing flags
         needs_sql = route_decision == "SQL"
         needs_memory = route_decision == "MEMORY"
         query_type = route_decision.lower()
-        
+
         return {
-            **state, 
+            **state,
             "needs_sql": needs_sql,
             "needs_memory": needs_memory,
-            "query_type": query_type
+            "query_type": query_type,
         }
 
     def _route_decision(self, state: State) -> str:
@@ -149,7 +145,6 @@ class EnhancedSQLOrchestrator:
             return "search_memory"
         else:
             return "direct_response"
-
 
     async def _contextualize_query(self, state: State) -> State:
         """Rewrite the user's query using the message history from the state."""
@@ -163,7 +158,7 @@ class EnhancedSQLOrchestrator:
         context_prompt = f"""Based on the chat history, rewrite the following user query to be a standalone question.
 
         History:
-        {state['messages']}
+        {state["messages"]}
 
         User Query: {user_query}
 
@@ -176,7 +171,7 @@ class EnhancedSQLOrchestrator:
 
     async def _generate_sql(self, state: State) -> State:
         """Generate SQL query."""
-        prompt = f"""Convert to SQL for Chinook music database: {state['user_query']}
+        prompt = f"""Convert to SQL for Chinook music database: {state["user_query"]}
 
 Return ONLY the SQL query with no formatting, no code blocks, no explanation.
 Example: SELECT COUNT(*) FROM Artist"""
@@ -187,7 +182,9 @@ Example: SELECT COUNT(*) FROM Artist"""
         # Clean up any markdown formatting
         if sql_query.startswith("```"):
             lines = sql_query.split("\n")
-            sql_query = "\n".join(line for line in lines if not line.startswith("```") and line.strip())
+            sql_query = "\n".join(
+                line for line in lines if not line.startswith("```") and line.strip()
+            )
             sql_query = sql_query.strip()
 
         agents_used = state.get("agents_used", []) + ["sql_generator_llm"]
@@ -198,12 +195,7 @@ Example: SELECT COUNT(*) FROM Artist"""
         """Validate SQL using A2A agent."""
         # Create A2A message
         a2a_message = {
-            "task": {
-                "skill": "validate_sql",
-                "parameters": {
-                    "sql": state["sql_query"]
-                }
-            }
+            "task": {"skill": "validate_sql", "parameters": {"sql": state["sql_query"]}}
         }
 
         # Send to validation agent
@@ -213,18 +205,22 @@ Example: SELECT COUNT(*) FROM Artist"""
             validation_result = result["artifacts"][0]
             is_valid = validation_result["is_valid"] and validation_result["safe"]
         else:
-            validation_result = {"is_valid": False, "issues": ["Validation failed"], "safe": False}
+            validation_result = {
+                "is_valid": False,
+                "issues": ["Validation failed"],
+                "safe": False,
+            }
             is_valid = False
 
         agents_used = state.get("agents_used", []) + ["sql_validation_agent"]
         mcp_servers_used = state.get("mcp_servers_used", []) + ["python_repl_mcp"]
 
         return {
-        **state,
-        "is_valid": is_valid,
-        "validation_result": validation_result,
-        "agents_used": agents_used,
-        "mcp_servers_used": mcp_servers_used
+            **state,
+            "is_valid": is_valid,
+            "validation_result": validation_result,
+            "agents_used": agents_used,
+            "mcp_servers_used": mcp_servers_used,
         }
 
     async def _execute_sql(self, state: State) -> State:
@@ -236,7 +232,8 @@ Example: SELECT COUNT(*) FROM Artist"""
                 **state,
                 "sql_result": "MCP connection failed health check",
                 "final_response": "Database connection error - please try again",
-                "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_failed"]
+                "mcp_servers_used": state.get("mcp_servers_used", [])
+                + ["sqlite_mcp_failed"],
             }
 
         try:
@@ -250,7 +247,7 @@ Example: SELECT COUNT(*) FROM Artist"""
                 **state,
                 "sql_result": str(result),
                 "final_response": str(result),
-                "mcp_servers_used": mcp_servers_used
+                "mcp_servers_used": mcp_servers_used,
             }
         except Exception as e:
             print(f"❌ SQL execution failed: {e}")
@@ -258,7 +255,8 @@ Example: SELECT COUNT(*) FROM Artist"""
                 **state,
                 "sql_result": f"Execution error: {str(e)}",
                 "final_response": f"Database query failed: {str(e)}",
-                "mcp_servers_used": state.get("mcp_servers_used", []) + ["sqlite_mcp_error"]
+                "mcp_servers_used": state.get("mcp_servers_used", [])
+                + ["sqlite_mcp_error"],
             }
 
     async def _search_memory(self, state: State) -> State:
@@ -266,26 +264,26 @@ Example: SELECT COUNT(*) FROM Artist"""
         try:
             # Simple, direct query to ChromaDB MCP
             search_query = f"Search the system_interactions collection for content related to: {state['user_query']}"
-            
+
             # Use factory interface directly - no complex isolation layer
             result = await self.chroma_logger.query(search_query)
-            
+
             mcp_servers_used = state.get("mcp_servers_used", []) + ["chroma_mcp_direct"]
-            
+
             # Format the memory results
             if result and len(str(result).strip()) > 10:  # Basic result check
                 memory_response = f"Based on your previous interactions:\n\n{result}"
             else:
                 memory_response = "I don't have any relevant previous interactions to reference for this query."
-            
+
             return {
                 **state,
                 "memory_query": search_query,
                 "memory_result": str(result),
                 "final_response": memory_response,
-                "mcp_servers_used": mcp_servers_used
+                "mcp_servers_used": mcp_servers_used,
             }
-            
+
         except Exception as e:
             print(f"❌ ChromaDB direct query failed: {e}")
             return {
@@ -293,28 +291,34 @@ Example: SELECT COUNT(*) FROM Artist"""
                 "memory_query": f"Search for: {state['user_query']}",
                 "memory_result": f"Error: {str(e)}",
                 "final_response": "I'm having trouble accessing my memory right now. Please try again.",
-                "mcp_servers_used": state.get("mcp_servers_used", []) + ["chroma_mcp_error"]
+                "mcp_servers_used": state.get("mcp_servers_used", [])
+                + ["chroma_mcp_error"],
             }
 
     async def _direct_response(self, state: State) -> State:
         """Handle non-SQL or invalid SQL."""
         if not state["needs_sql"]:
-            response = await self.llm.ainvoke(state['user_query'])
+            response = await self.llm.ainvoke(state["user_query"])
             # Clear any previous SQL-related fields for non-SQL responses
             return {
-                **state, 
+                **state,
                 "final_response": response.content,
                 "sql_query": "",  # Clear previous SQL query
                 "sql_result": "",  # Clear previous SQL result
-                "mcp_servers_used": state.get("mcp_servers_used", []),  # Keep existing MCP usage
-                "agents_used": state.get("agents_used", [])  # Keep existing agent usage
+                "mcp_servers_used": state.get(
+                    "mcp_servers_used", []
+                ),  # Keep existing MCP usage
+                "agents_used": state.get(
+                    "agents_used", []
+                ),  # Keep existing agent usage
             }
         else:
             # SQL was invalid
-            issues = state.get("validation_result", {}).get("issues", ["Unknown validation error"])
+            issues = state.get("validation_result", {}).get(
+                "issues", ["Unknown validation error"]
+            )
             error_msg = f"SQL validation failed: {', '.join(issues)}"
             return {**state, "final_response": error_msg}
-
 
     async def _log_interaction(self, final_state: State):
         """Logs the complete interaction details to ChromaDB using the tested add_interaction function."""
@@ -327,10 +331,10 @@ Example: SELECT COUNT(*) FROM Artist"""
                 mcp_servers=final_state.get("mcp_servers_used", []),
                 agents=final_state.get("agents_used", []),
                 sql_generated=final_state.get("sql_query"),
-                validation_result=final_state.get("validation_result")
+                validation_result=final_state.get("validation_result"),
             )
-            print(f"✓ Logged interaction to ChromaDB using add_interaction")
-            
+            print("✓ Logged interaction to ChromaDB using add_interaction")
+
         except Exception as e:
             # Never let logging failures crash the main application
             print(f"⚠️ ChromaDB logging failed: {e}")
@@ -356,7 +360,7 @@ Example: SELECT COUNT(*) FROM Artist"""
             "memory_result": "",
             "final_response": "",
             "mcp_servers_used": [],
-            "agents_used": []
+            "agents_used": [],
         }
 
         # We can't just return the whole state, we need to return a dict
@@ -384,6 +388,7 @@ Example: SELECT COUNT(*) FROM Artist"""
         except Exception as e:
             print(f"❌ Enhanced Orchestrator - Run failed: {e}")
             import traceback
+
             traceback.print_exc()
             raise
 
@@ -401,7 +406,9 @@ async def test():
     await orchestrator.initialize()
 
     # Test valid SQL query
-    result = await orchestrator.run("How many artists are in the database?", "test-thread-1")
+    result = await orchestrator.run(
+        "How many artists are in the database?", "test-thread-1"
+    )
     print(f"Valid query result: {result.get('final_response', 'No response')[:100]}...")
 
     # Test dangerous SQL

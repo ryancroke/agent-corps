@@ -12,6 +12,7 @@ from typing import Any, Protocol
 @dataclass(frozen=True)
 class MCPQueryContext:
     """Clean, immutable query context for MCP servers."""
+
     user_query: str
     sql_query: str | None = None
     query_type: str = "sql"  # sql, search, etc.
@@ -28,6 +29,7 @@ class MCPQueryContext:
 @dataclass(frozen=True)
 class MCPResponse:
     """Clean, typed response from MCP servers."""
+
     success: bool
     content: str
     error_message: str | None = None
@@ -54,7 +56,7 @@ class MCPServer(Protocol):
 class MCPIsolationLayer:
     """
     Isolation layer that provides clean interfaces to MCP servers.
-    
+
     This layer:
     1. Converts LangGraph state to clean MCPQueryContext
     2. Routes to appropriate MCP servers
@@ -73,7 +75,7 @@ class MCPIsolationLayer:
     def extract_clean_context(self, langgraph_state: dict[str, Any]) -> MCPQueryContext:
         """
         Extract clean query context from LangGraph state.
-        
+
         This is the critical isolation point - we only extract what's needed
         and ignore all LangGraph orchestration artifacts.
         """
@@ -93,12 +95,14 @@ class MCPIsolationLayer:
             user_query=user_query,
             sql_query=sql_query if sql_query else None,
             query_type="sql" if sql_query else "direct",
-            database_name="chinook"
+            database_name="chinook",
         )
 
         print("✅ Clean context created:")
         print(f"   User query: '{context.user_query[:50]}...'")
-        print(f"   SQL query: '{context.sql_query[:50] if context.sql_query else 'None'}...'")
+        print(
+            f"   SQL query: '{context.sql_query[:50] if context.sql_query else 'None'}...'"
+        )
         print(f"   Query type: {context.query_type}")
 
         return context
@@ -106,10 +110,10 @@ class MCPIsolationLayer:
     async def execute_sql_query(self, langgraph_state: dict[str, Any]) -> MCPResponse:
         """
         Execute SQL query through isolated SQLite MCP server.
-        
+
         Args:
             langgraph_state: Full LangGraph state (will be cleaned)
-            
+
         Returns:
             Clean MCPResponse with no state contamination
         """
@@ -123,7 +127,7 @@ class MCPIsolationLayer:
             return MCPResponse(
                 success=False,
                 content="",
-                error_message=f"Context extraction failed: {str(e)}"
+                error_message=f"Context extraction failed: {str(e)}",
             )
 
         # Step 2: Get SQLite server
@@ -133,7 +137,7 @@ class MCPIsolationLayer:
             return MCPResponse(
                 success=False,
                 content="",
-                error_message="SQLite MCP server not available"
+                error_message="SQLite MCP server not available",
             )
 
         # Step 3: Execute with clean context
@@ -147,16 +151,28 @@ class MCPIsolationLayer:
             result = await sqlite_server.query(task_description)
 
             # Check for error indicators in the response
-            error_indicators = ["error", "failed", "cannot", "unable", "exception", "invalid", "issue", "problem", "try again"]
+            error_indicators = [
+                "error",
+                "failed",
+                "cannot",
+                "unable",
+                "exception",
+                "invalid",
+                "issue",
+                "problem",
+                "try again",
+            ]
             result_lower = str(result).lower()
-            found_errors = [indicator for indicator in error_indicators if indicator in result_lower]
+            found_errors = [
+                indicator for indicator in error_indicators if indicator in result_lower
+            ]
 
             if found_errors:
                 response = MCPResponse(
                     success=False,
                     content=str(result),
                     error_message=f"Query execution returned error indicators: {found_errors}",
-                    metadata={"error_indicators": found_errors}
+                    metadata={"error_indicators": found_errors},
                 )
             else:
                 response = MCPResponse(
@@ -164,8 +180,8 @@ class MCPIsolationLayer:
                     content=str(result),
                     metadata={
                         "query_executed": context.sql_query,
-                        "execution_method": "factory_interface"
-                    }
+                        "execution_method": "factory_interface",
+                    },
                 )
 
             print(f"✅ SQL execution completed - Success: {response.success}")
@@ -176,7 +192,7 @@ class MCPIsolationLayer:
             return MCPResponse(
                 success=False,
                 content="",
-                error_message=f"SQL execution failed: {str(e)}"
+                error_message=f"SQL execution failed: {str(e)}",
             )
 
     async def health_check_all(self) -> dict[str, bool]:

@@ -18,9 +18,7 @@ async def test_single_query():
         full_config = json.load(f)
 
     sqlite_server_config = {
-        "mcpServers": {
-            "sqlite": full_config["mcpServers"]["sqlite"]
-        }
+        "mcpServers": {"sqlite": full_config["mcpServers"]["sqlite"]}
     }
 
     print("🔄 Creating MCP Client...")
@@ -32,10 +30,7 @@ async def test_single_query():
 
     print("📤 Sending simple query...")
     try:
-        result = await asyncio.wait_for(
-            agent.run("List table names"),
-            timeout=15.0
-        )
+        result = await asyncio.wait_for(agent.run("List table names"), timeout=15.0)
         print(f"✅ Query succeeded: {result}")
         return True
 
@@ -57,9 +52,7 @@ async def test_multiple_queries():
         full_config = json.load(f)
 
     sqlite_server_config = {
-        "mcpServers": {
-            "sqlite": full_config["mcpServers"]["sqlite"]
-        }
+        "mcpServers": {"sqlite": full_config["mcpServers"]["sqlite"]}
     }
 
     print("🔄 Creating MCP Client...")
@@ -72,16 +65,13 @@ async def test_multiple_queries():
     queries = [
         "List table names",
         "Count rows in Artist table",
-        "Count rows in Album table"
+        "Count rows in Album table",
     ]
 
     for i, query in enumerate(queries, 1):
         print(f"\n📤 Query {i}: {query}")
         try:
-            result = await asyncio.wait_for(
-                agent.run(query),
-                timeout=15.0
-            )
+            result = await asyncio.wait_for(agent.run(query), timeout=15.0)
             print(f"✅ Query {i} succeeded: {str(result)[:100]}...")
 
         except TimeoutError:
@@ -102,7 +92,7 @@ async def test_fresh_clients():
     queries = [
         "List table names",
         "Count rows in Artist table",
-        "Count rows in Album table"
+        "Count rows in Album table",
     ]
 
     for i, query in enumerate(queries, 1):
@@ -113,9 +103,7 @@ async def test_fresh_clients():
             full_config = json.load(f)
 
         sqlite_server_config = {
-            "mcpServers": {
-                "sqlite": full_config["mcpServers"]["sqlite"]
-            }
+            "mcpServers": {"sqlite": full_config["mcpServers"]["sqlite"]}
         }
 
         client = MCPClient.from_dict(sqlite_server_config)
@@ -123,10 +111,7 @@ async def test_fresh_clients():
         agent = MCPAgent(llm=llm, client=client, max_steps=10)
 
         try:
-            result = await asyncio.wait_for(
-                agent.run(query),
-                timeout=15.0
-            )
+            result = await asyncio.wait_for(agent.run(query), timeout=15.0)
             print(f"✅ Query {i} succeeded: {str(result)[:100]}...")
 
         except TimeoutError:

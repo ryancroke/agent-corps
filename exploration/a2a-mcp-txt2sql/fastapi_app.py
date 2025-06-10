@@ -13,8 +13,8 @@ from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from enhanced_orchestrator import EnhancedSQLOrchestrator, State
 from data.chroma.create_db import create_chroma_db
+from enhanced_orchestrator import EnhancedSQLOrchestrator, State
 
 
 # Pydantic models for API
@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
     # Startup
     global orchestrator
     print("🚀 Starting FastAPI server...")
-    
+
     # Initialize ChromaDB first
     print("🔄 Initializing ChromaDB...")
     try:
@@ -63,7 +63,7 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"⚠️  ChromaDB initialization warning: {e}")
         print("   Continuing with startup...")
-    
+
     print("🔄 Initializing Enhanced SQL Orchestrator...")
     orchestrator = EnhancedSQLOrchestrator()
     await orchestrator.initialize()
@@ -83,7 +83,7 @@ app = FastAPI(
     title="🎵 SQL Chat AI",
     description="Chat with your Chinook Music Database using AI • Powered by A2A & MCP protocols",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Mount static files for frontend
@@ -111,11 +111,12 @@ async def process_query(request: QueryRequest):
     try:
         # Process query through orchestrator
         final_state: State = await orchestrator.run(
-            user_query=request.message,
-            thread_id=thread_id
+            user_query=request.message, thread_id=thread_id
         )
 
-        response_content = final_state.get("final_response", "Sorry, an error occurred.")
+        response_content = final_state.get(
+            "final_response", "Sorry, an error occurred."
+        )
         sql_query = final_state.get("sql_query")
         timestamp = datetime.now().isoformat()
 
@@ -124,19 +125,19 @@ async def process_query(request: QueryRequest):
             chat_sessions[thread_id] = []
 
         # Add user message
-        chat_sessions[thread_id].append(ChatMessage(
-            role="user",
-            content=request.message,
-            timestamp=timestamp
-        ))
+        chat_sessions[thread_id].append(
+            ChatMessage(role="user", content=request.message, timestamp=timestamp)
+        )
 
         # Add assistant response
-        chat_sessions[thread_id].append(ChatMessage(
-            role="assistant",
-            content=response_content,
-            sql_query=sql_query,
-            timestamp=timestamp
-        ))
+        chat_sessions[thread_id].append(
+            ChatMessage(
+                role="assistant",
+                content=response_content,
+                sql_query=sql_query,
+                timestamp=timestamp,
+            )
+        )
 
         return QueryResponse(
             response=response_content,
@@ -144,12 +145,14 @@ async def process_query(request: QueryRequest):
             thread_id=thread_id,
             timestamp=timestamp,
             mcp_servers_used=final_state.get("mcp_servers_used", []),
-            agents_used=final_state.get("agents_used", [])
+            agents_used=final_state.get("agents_used", []),
         )
 
     except Exception as e:
         print(f"❌ Query processing failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Query processing failed: {str(e)}"
+        ) from e
 
 
 @app.get("/api/history/{thread_id}", response_model=ChatHistoryResponse)
@@ -180,7 +183,7 @@ async def health_check():
         "status": "healthy" if mcp_healthy else "degraded",
         "orchestrator": "ready",
         "mcp_server": "healthy" if mcp_healthy else "unhealthy",
-        "timestamp": datetime.now().isoformat()
+        "timestamp": datetime.now().isoformat(),
     }
 
 
@@ -219,18 +222,19 @@ async def websocket_endpoint(websocket: WebSocket, thread_id: str):
             try:
                 # Process query
                 final_state: State = await orchestrator.run(
-                    user_query=data,
-                    thread_id=thread_id
+                    user_query=data, thread_id=thread_id
                 )
 
-                response_content = final_state.get("final_response", "Sorry, an error occurred.")
+                response_content = final_state.get(
+                    "final_response", "Sorry, an error occurred."
+                )
                 sql_query = final_state.get("sql_query")
 
                 # Send response back
                 response = {
                     "response": response_content,
                     "sql_query": sql_query,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 }
 
                 await websocket.send_json(response)
@@ -247,9 +251,5 @@ if __name__ == "__main__":
     print("📍 Open: http://localhost:8000")
 
     uvicorn.run(
-        "fastapi_app:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
+        "fastapi_app:app", host="0.0.0.0", port=8000, reload=True, log_level="info"
     )

@@ -29,18 +29,24 @@ class MCPDiagnostic:
     def get_server_processes(self):
         """Find MCP server processes."""
         processes = []
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'status', 'cpu_percent', 'memory_info']):
+        for proc in psutil.process_iter(
+            ["pid", "name", "cmdline", "status", "cpu_percent", "memory_info"]
+        ):
             try:
-                cmdline = ' '.join(proc.info['cmdline']) if proc.info['cmdline'] else ''
-                if 'mcp-server-sqlite' in cmdline or 'sqlite' in cmdline.lower():
-                    processes.append({
-                        'pid': proc.info['pid'],
-                        'name': proc.info['name'],
-                        'cmdline': cmdline,
-                        'status': proc.info['status'],
-                        'cpu_percent': proc.info['cpu_percent'],
-                        'memory_mb': proc.info['memory_info'].rss / 1024 / 1024 if proc.info['memory_info'] else 0
-                    })
+                cmdline = " ".join(proc.info["cmdline"]) if proc.info["cmdline"] else ""
+                if "mcp-server-sqlite" in cmdline or "sqlite" in cmdline.lower():
+                    processes.append(
+                        {
+                            "pid": proc.info["pid"],
+                            "name": proc.info["name"],
+                            "cmdline": cmdline,
+                            "status": proc.info["status"],
+                            "cpu_percent": proc.info["cpu_percent"],
+                            "memory_mb": proc.info["memory_info"].rss / 1024 / 1024
+                            if proc.info["memory_info"]
+                            else 0,
+                        }
+                    )
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
         return processes
@@ -73,7 +79,7 @@ class MCPDiagnostic:
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
             print(f"✅ Server started with PID: {process.pid}")
@@ -86,8 +92,8 @@ class MCPDiagnostic:
                 "params": {
                     "protocolVersion": "2024-11-05",
                     "capabilities": {},
-                    "clientInfo": {"name": "diagnostic", "version": "1.0"}
-                }
+                    "clientInfo": {"name": "diagnostic", "version": "1.0"},
+                },
             }
 
             print("📤 Sending initialize message...")
@@ -121,7 +127,9 @@ class MCPDiagnostic:
         print("📊 Process state BEFORE:")
         processes_before = self.get_server_processes()
         for proc in processes_before:
-            print(f"  PID {proc['pid']}: {proc['name']} - {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB")
+            print(
+                f"  PID {proc['pid']}: {proc['name']} - {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB"
+            )
 
         if not processes_before:
             print("  No MCP server processes found")
@@ -131,9 +139,7 @@ class MCPDiagnostic:
             full_config = json.load(f)
 
         sqlite_server_config = {
-            "mcpServers": {
-                "sqlite": full_config["mcpServers"]["sqlite"]
-            }
+            "mcpServers": {"sqlite": full_config["mcpServers"]["sqlite"]}
         }
 
         print("\n🔄 Creating MCP Client...")
@@ -151,7 +157,9 @@ class MCPDiagnostic:
             print("\n📊 Process state AFTER client creation:")
             processes_after = self.get_server_processes()
             for proc in processes_after:
-                print(f"  PID {proc['pid']}: {proc['name']} - {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB")
+                print(
+                    f"  PID {proc['pid']}: {proc['name']} - {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB"
+                )
 
             # Test multiple queries with detailed monitoring
             queries = [
@@ -159,7 +167,7 @@ class MCPDiagnostic:
                 "How many albums are in the database?",
                 "How many tracks are in the database?",
                 "List the first 3 artist names",
-                "What are the table names in the database?"
+                "What are the table names in the database?",
             ]
 
             for i, query in enumerate(queries, 1):
@@ -169,21 +177,23 @@ class MCPDiagnostic:
                 processes_before_query = self.get_server_processes()
                 print(f"📊 Processes before query {i}:")
                 for proc in processes_before_query:
-                    print(f"  PID {proc['pid']}: {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB")
+                    print(
+                        f"  PID {proc['pid']}: {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB"
+                    )
 
                 # Execute query with timing
                 query_start = time.time()
                 try:
-                    result = await asyncio.wait_for(
-                        self.agent.run(query),
-                        timeout=30.0
-                    )
+                    result = await asyncio.wait_for(self.agent.run(query), timeout=30.0)
                     query_time = time.time() - query_start
                     print(f"✅ Query {i} completed in {query_time:.2f}s")
                     print(f"📄 Result length: {len(str(result))} characters")
 
                     # Check for error indicators
-                    if any(indicator in str(result).lower() for indicator in ["error", "failed", "cannot", "unable"]):
+                    if any(
+                        indicator in str(result).lower()
+                        for indicator in ["error", "failed", "cannot", "unable"]
+                    ):
                         print(f"⚠️ Query {i} contains error indicators")
 
                 except TimeoutError:
@@ -198,11 +208,13 @@ class MCPDiagnostic:
                 processes_after_query = self.get_server_processes()
                 print(f"📊 Processes after query {i}:")
                 for proc in processes_after_query:
-                    print(f"  PID {proc['pid']}: {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB")
+                    print(
+                        f"  PID {proc['pid']}: {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB"
+                    )
 
                 # Check for process changes
-                before_pids = {p['pid'] for p in processes_before_query}
-                after_pids = {p['pid'] for p in processes_after_query}
+                before_pids = {p["pid"] for p in processes_before_query}
+                after_pids = {p["pid"] for p in processes_after_query}
 
                 if before_pids != after_pids:
                     new_pids = after_pids - before_pids
@@ -218,6 +230,7 @@ class MCPDiagnostic:
         except Exception as e:
             print(f"❌ Client lifecycle test failed: {e}")
             import traceback
+
             traceback.print_exc()
 
         finally:
@@ -225,7 +238,9 @@ class MCPDiagnostic:
             print("\n📊 Final process state:")
             final_processes = self.get_server_processes()
             for proc in final_processes:
-                print(f"  PID {proc['pid']}: {proc['name']} - {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB")
+                print(
+                    f"  PID {proc['pid']}: {proc['name']} - {proc['status']} - CPU: {proc['cpu_percent']}% - Memory: {proc['memory_mb']:.1f}MB"
+                )
 
     async def test_server_isolation(self):
         """Test if running the server externally helps."""
