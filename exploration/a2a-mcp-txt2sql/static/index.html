@@ -10,60 +10,38 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <header class="main-header">
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
             <h1>🎵 SQL Chat AI</h1>
-            <p>Chat with your Chinook Music Database using AI • Powered by A2A & MCP protocols</p>
             <div class="status-indicator" id="status">
                 <span class="status-dot"></span>
                 <span class="status-text">Connecting...</span>
             </div>
-        </header>
-
-        <!-- Chat Container -->
-        <div class="chat-container">
-            <div class="chat-messages" id="chatMessages">
-                <!-- Welcome message -->
-                <div class="message assistant-message">
-                    <div class="message-avatar">🎵</div>
-                    <div class="message-content">
-                        <div class="message-text">
-                            Welcome! I can help you explore the Chinook music database. Try asking questions like:
-                            <ul>
-                                <li>"How many artists are in the database?"</li>
-                                <li>"Show me the top 5 albums by sales"</li>
-                                <li>"What genres are available?"</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Input Area -->
-            <div class="chat-input-container">
-                <div class="chat-input-wrapper">
-                    <input 
-                        type="text" 
-                        id="messageInput" 
-                        placeholder="Ask me anything about the music database... 🎵"
-                        disabled
-                    >
-                    <button id="sendButton" disabled>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="22" y1="2" x2="11" y2="13"></line>
-                            <polygon points="22,2 15,22 11,13 2,9"></polygon>
-                        </svg>
-                    </button>
-                </div>
-                <div class="loading-indicator" id="loadingIndicator" style="display: none;">
-                    <div class="spinner"></div>
-                    <span>AI agents collaborating...</span>
+        </div>
+        <div class="header-right">
+            <button class="agent-toggle" id="agentToggle">🤖 Agents</button>
+        </div>
+    </header>
+    
+    <!-- Main Chat -->
+    <main class="chat-container">
+        <div class="messages" id="chatMessages">
+            <!-- Welcome message -->
+            <div class="message">
+                <div class="message-avatar">🎵</div>
+                <div class="message-content">
+                    <strong>Welcome!</strong> I can help you explore the Chinook music database. Try asking questions like:
+                    <ul style="margin-top: 0.5rem; margin-left: 1rem;">
+                        <li>"How many artists are in the database?"</li>
+                        <li>"Show me the top 5 albums by sales"</li>
+                        <li>"What genres are available?"</li>
+                    </ul>
                 </div>
             </div>
         </div>
-
-        <!-- Example Queries (shown when chat is empty) -->
+        
+        <!-- Example Queries -->
         <div class="example-queries" id="exampleQueries">
             <h3>💡 Try these example queries:</h3>
             <div class="example-query" data-query="How many artists are in the database?">
@@ -79,11 +57,70 @@
                 Show me all the artists from Brazil
             </div>
         </div>
+        
+        <!-- Input Area -->
+        <div class="input-container">
+            <div class="input-wrapper">
+                <input type="text" class="input-field" id="messageInput" placeholder="Ask me anything about the music database... 🎵" disabled>
+                <button class="send-btn" id="sendButton" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22,2 15,22 11,13 2,9"></polygon>
+                    </svg>
+                </button>
+            </div>
+            <div class="loading-indicator" id="loadingIndicator" style="display: none;">
+                <div class="spinner"></div>
+                <span>AI agents collaborating...</span>
+            </div>
+        </div>
+    </main>
 
-        <!-- Footer -->
-        <footer class="footer">
-            <p>Powered by FastAPI, LangGraph, and MCP protocols</p>
-        </footer>
+    <!-- Agent Legend Overlay -->
+    <div class="agent-overlay hidden" id="agentOverlay">
+        <div class="agent-panel">
+            <div class="agent-header">
+                <h3>🤖 Agent Status</h3>
+                <button class="close-btn" id="closeAgents">×</button>
+            </div>
+            <div class="agent-list">
+                <div class="agent-item" data-agent="general">
+                    <div class="agent-indicator"></div>
+                    <div class="agent-info">
+                        <span class="agent-name">General</span>
+                        <span class="agent-type">LLM</span>
+                    </div>
+                </div>
+                <div class="agent-item" data-agent="sqlite">
+                    <div class="agent-indicator"></div>
+                    <div class="agent-info">
+                        <span class="agent-name">SQLite</span>
+                        <span class="agent-type">MCP</span>
+                    </div>
+                </div>
+                <div class="agent-item" data-agent="chroma">
+                    <div class="agent-indicator"></div>
+                    <div class="agent-info">
+                        <span class="agent-name">ChromaDB</span>
+                        <span class="agent-type">MCP</span>
+                    </div>
+                </div>
+                <div class="agent-item" data-agent="python_repl">
+                    <div class="agent-indicator"></div>
+                    <div class="agent-info">
+                        <span class="agent-name">Python REPL</span>
+                        <span class="agent-type">MCP</span>
+                    </div>
+                </div>
+                <div class="agent-item" data-agent="sql_validation">
+                    <div class="agent-indicator"></div>
+                    <div class="agent-info">
+                        <span class="agent-name">SQL Validator</span>
+                        <span class="agent-type">A2A</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="/static/app.js"></script>

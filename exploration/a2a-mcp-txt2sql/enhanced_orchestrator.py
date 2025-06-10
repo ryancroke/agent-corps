@@ -300,7 +300,15 @@ Example: SELECT COUNT(*) FROM Artist"""
         """Handle non-SQL or invalid SQL."""
         if not state["needs_sql"]:
             response = await self.llm.ainvoke(state['user_query'])
-            return {**state, "final_response": response.content}
+            # Clear any previous SQL-related fields for non-SQL responses
+            return {
+                **state, 
+                "final_response": response.content,
+                "sql_query": "",  # Clear previous SQL query
+                "sql_result": "",  # Clear previous SQL result
+                "mcp_servers_used": state.get("mcp_servers_used", []),  # Keep existing MCP usage
+                "agents_used": state.get("agents_used", [])  # Keep existing agent usage
+            }
         else:
             # SQL was invalid
             issues = state.get("validation_result", {}).get("issues", ["Unknown validation error"])

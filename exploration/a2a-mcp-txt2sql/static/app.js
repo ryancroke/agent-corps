@@ -12,9 +12,14 @@ class ChatApp {
         this.loadingIndicator = document.getElementById('loadingIndicator');
         this.statusIndicator = document.getElementById('status');
         this.exampleQueries = document.getElementById('exampleQueries');
+        this.agentLegend = document.getElementById('agentLegend');
+        this.agentOverlay = document.getElementById('agentOverlay');
+        this.agentToggle = document.getElementById('agentToggle');
+        this.closeAgents = document.getElementById('closeAgents');
         
         this.initializeEventListeners();
         this.checkServerHealth();
+        this.initializeAgentLegend();
     }
     
     generateThreadId() {
@@ -39,6 +44,23 @@ class ChatApp {
                 this.messageInput.value = query;
                 this.sendMessage();
             });
+        });
+        
+        // Agent overlay toggle
+        this.agentToggle.addEventListener('click', () => {
+            this.showAgentOverlay();
+        });
+        
+        // Close agent overlay
+        this.closeAgents.addEventListener('click', () => {
+            this.hideAgentOverlay();
+        });
+        
+        // Close overlay when clicking outside
+        this.agentOverlay.addEventListener('click', (e) => {
+            if (e.target === this.agentOverlay) {
+                this.hideAgentOverlay();
+            }
         });
     }
     
@@ -89,6 +111,9 @@ class ChatApp {
         this.messageInput.value = '';
         this.setLoading(true);
         
+        // Show agents as potentially in-use during processing
+        this.showActiveAgents(['general']);
+        
         try {
             const response = await fetch('/api/query', {
                 method: 'POST',
@@ -108,11 +133,20 @@ class ChatApp {
             const result = await response.json();
             
             // Add assistant response to chat
-            this.addMessage('assistant', result.response, result.sql_query);
+            // Only show SQL query if SQL-related MCP servers or agents were actually used
+            const usedSqlComponents = result.mcp_servers_used?.includes('sqlite_mcp_direct') || 
+                                    result.agents_used?.includes('sql_validation_agent');
+            this.addMessage('assistant', result.response, usedSqlComponents ? result.sql_query : null);
+            
+            // Update agent states based on response
+            this.updateAgentsFromResponse(result);
             
         } catch (error) {
             console.error('Error sending message:', error);
             this.addMessage('assistant', `Sorry, I encountered an error: ${error.message}`, null, true);
+            // Reset to general on error
+            this.resetAgentStates();
+            this.setAgentState('general', 'active');
         } finally {
             this.setLoading(false);
         }
@@ -173,6 +207,87 @@ class ChatApp {
     
     scrollToBottom() {
         this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
+    }
+    
+    initializeAgentLegend() {
+        // Set all agents to inactive state initially
+        this.resetAgentStates();
+        
+        // Mark general as active by default
+        this.setAgentState('general', 'active');
+    }
+    
+    resetAgentStates() {
+        const agentItems = document.querySelectorAll('.agent-item');
+        agentItems.forEach(item => {
+            item.classList.remove('active', 'in-use');
+        });
+    }
+    
+    setAgentState(agentName, state) {
+        const agentItem = document.querySelector(`[data-agent="${agentName}"]`);
+        if (agentItem) {
+            agentItem.classList.remove('active', 'in-use');
+            if (state === 'active') {
+                agentItem.classList.add('active');
+            } else if (state === 'in-use') {
+                agentItem.classList.add('in-use');
+            }
+        }
+    }
+    
+    updateAgentsFromResponse(result) {
+        // Reset all agents
+        this.resetAgentStates();
+        
+        // Determine which agents were used based on the response
+        const queryType = this.inferQueryType(result);
+        
+        if (queryType === 'sql') {
+            this.setAgentState('sqlite', 'active');
+            this.setAgentState('sql_validation', 'active');
+            if (result.sql_query) {
+                this.setAgentState('python_repl', 'active');
+            }
+        } else if (queryType === 'memory') {
+            this.setAgentState('chroma', 'active');
+        } else {
+            this.setAgentState('general', 'active');
+        }
+    }
+    
+    inferQueryType(result) {
+        // Infer the query type based on the response structure
+        if (result.sql_query) {
+            return 'sql';
+        } else if (result.response && result.response.includes('previous interactions')) {
+            return 'memory';
+        } else {
+            return 'general';
+        }
+    }
+    
+    showActiveAgents(agentNames) {
+        // Reset all agents first
+        this.resetAgentStates();
+        
+        // Set specified agents as in-use
+        agentNames.forEach(agentName => {
+            this.setAgentState(agentName, 'in-use');
+        });
+        
+        // Keep the agents visible (no auto-reset)
+        // User can see which agents were used for their last query
+    }
+    
+    showAgentOverlay() {
+        this.agentOverlay.classList.remove('hidden');
+        this.agentToggle.classList.add('active');
+    }
+    
+    hideAgentOverlay() {
+        this.agentOverlay.classList.add('hidden');
+        this.agentToggle.classList.remove('active');
     }
 }
 

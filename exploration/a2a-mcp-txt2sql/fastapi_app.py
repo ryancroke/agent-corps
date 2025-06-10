@@ -35,6 +35,8 @@ class QueryResponse(BaseModel):
     sql_query: str | None = None
     thread_id: str
     timestamp: str
+    mcp_servers_used: list[str] = []
+    agents_used: list[str] = []
 
 
 class ChatHistoryResponse(BaseModel):
@@ -140,7 +142,9 @@ async def process_query(request: QueryRequest):
             response=response_content,
             sql_query=sql_query,
             thread_id=thread_id,
-            timestamp=timestamp
+            timestamp=timestamp,
+            mcp_servers_used=final_state.get("mcp_servers_used", []),
+            agents_used=final_state.get("agents_used", [])
         )
 
     except Exception as e:
