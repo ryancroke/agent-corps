@@ -461,3 +461,103 @@ Key innovations:
 - **Seamless Scalability**: New agents automatically integrate via handoff tools
 
 This creates a self-improving, intelligent multi-agent system that efficiently handles everything from simple database queries to complex multi-step business workflows with full conversation continuity and real-time user feedback.
+
+Of course. This is a pivotal concept, and capturing it clearly is essential for your project's architecture. The idea of using MCP `Prompts` as first-class citizens is what separates a basic agent framework from a truly scalable and intelligent one.
+
+Here is a detailed Markdown document that encapsulates our conversation, analyzes the video's argument, and provides a concrete plan for your system.
+
+---
+
+# Architectural Plan: Leveraging MCP Prompts for Agentic Discovery and Workflow Composition
+
+## 1. Executive Summary
+
+This document outlines a "Prompt-first" architectural strategy for our intelligent platform. Traditional agent design often stops at defining a collection of **Tools**, leaving the agent's LLM to perform the complex and error-prone task of discovering and sequencing these tools.
+
+As argued by the creator of the `quick-data-mcp` server, this approach is limited. The most powerful and underutilized primitive in the Model Context Protocol (MCP) is the **Prompt**.
+
+We will architect our system around the principle that **Prompts are not just text templates; they are high-level, composable, and self-documenting agentic workflows.** By embracing this, we will simplify our core orchestration logic, increase system robustness, and build agents that are dramatically more capable and efficient.
+
+## 2. The Core Problem: The Agent's "Cold Start"
+
+An agent, no matter how intelligent its base LLM, is not omniscient. When our platform's `Orchestrator Agent` needs to delegate a task to a specialized MCP server (e.g., for data analysis, CRM interaction, or GitHub management), it faces a critical challenge:
+
+*   **How do I know what this server can do?**
+*   **Of the 30+ tools available, which ones do I need to call?**
+*   **In what sequence should I call them?**
+
+Relying on the agent to infer this from a flat list of tool names and descriptions is brittle and requires extensive, hard-coded knowledge or complex runtime planning. As demonstrated in the video, this often forces the developer or the agent to rely on external documentation (`README.md`), which defeats the purpose of a dynamic, programmatic interface.
+
+## 3. The MCP Primitive Tier List: A Shift in Perspective
+
+The author's central argument is that the three MCP primitives exist in a hierarchy of leverage. Most developers stop at the B-Tier, missing the S-Tier where true agentic power lies.
+
+> **Prompts (S-Tier) > Tools (A-Tier) > Resources (B-Tier)**
+
+| Tier | Primitive | Role | Description |
+| :--- | :--- | :--- | :--- |
+| **B-Tier** | **Resources** | Raw Materials | The underlying data. A file URI, a database table, a raw API response. Essential, but inert on its own. |
+| **A-Tier** | **Tools** | Atomic Actions | A single, discrete function that operates on a resource (e.g., `load_dataset`, `create_chart`, `get_dataset_info`). They are the verbs of the system. |
+| **S-Tier** | **Prompts** | **Agentic Workflows** | A high-level, named capability that **composes a sequence of tool calls and resource access**. It's a pre-built, repeatable recipe for solving a specific, domain-relevant problem. |
+
+By focusing on `Prompts`, we shift complexity *out* of our central agent's brain and *into* the specialized MCP servers where it belongs.
+
+## 4. The Three Key Advantages of a Prompt-First Strategy
+
+### 4.1. Solving Discovery and the "Cold Start" Problem
+A well-designed MCP server should use a `Prompt` to teach agents how to use it.
+
+*   **Tool-Only Approach:** The agent connects and asks, "What are your tools?" It gets back a list of 50 functions and is overwhelmed.
+*   **Prompt-Driven Approach:** The agent connects and invokes a single discovery prompt, like `/quick-data:list_mcp_assets_prompt`. The server responds with a rich, natural-language summary that includes:
+    *   A high-level overview of its purpose.
+    *   A categorized list of its most important `Prompts` (e.g., "Data Exploration Prompts", "Analysis Workflow Prompts").
+    *   A "Quick Start Flow" that gives the agent a clear, step-by-step guide on how to begin.
+
+### 4.2. Composing Atomic Tools into Intelligent Workflows
+`Prompts` turn multi-step, fragile tool chains into single, robust commands.
+
+*   **Tool-Only Approach:** To get business insights, our agent would need to: 1. `load_dataset`, 2. `get_dataset_info`, 3. `find_correlations`, 4. `suggest_analysis`, 5. `create_chart`, hoping it gets the sequence and parameters right at each step.
+*   **Prompt-Driven Approach:** Our agent invokes a single, high-level `Prompt` like `/quick-data:insight_generation_workshop_prompt`. The MCP server executes its own internal, pre-defined workflow, handling the entire chain of tool calls and returning a final, high-quality result.
+
+### 4.3. Creating a Guided, Conversational Experience
+`Prompts` enable the MCP server to become an active participant in the problem-solving dialogue.
+
+As seen in the video, the response from a `Prompt` isn't just data; it's a conversation.
+*   It provides a business insight: `Satisfied employees stay longer.`
+*   It suggests a next step: `Want to visualize this with option 2?`
+
+This guides the agent (and the user) towards a valuable outcome, making the entire system feel more intelligent and proactive.
+
+## 5. Our System Implementation: Data Flow & Agent Responsibilities
+
+We will implement a two-layer discovery model and assign clear responsibilities based on the MCP primitive tier list.
+
+### Layer 1: Platform-Wide MCP Server Registry
+
+Our platform will maintain a central service that acts as the "Yellow Pages" for all available MCP servers.
+
+*   **Purpose:** To map high-level capabilities to server addresses.
+*   **Example:**
+    ```json
+    {
+      "data_analytics": "http://quick-data-mcp.internal:8080",
+      "project_management": "http://jira-mcp.internal:8080",
+      "code_repository": "http://github-mcp.internal:8080",
+      "communications": "http://slack-mcp.internal:8080"
+    }
+    ```
+
+### Layer 2: Agent Consumption of MCP Primitives
+
+Different agents in our LangGraph architecture will interact with MCP primitives at different levels of abstraction.
+
+| Agent Type | Primary MCP Primitive Consumed | Purpose & Workflow | Resulting Simplification |
+| :--- | :--- | :--- | :--- |
+| **`Chief Orchestrator`** | **Prompts** (High-Level) | **Strategic Planning.** Uses the `MCP Server Registry` to find relevant servers. It then invokes high-level discovery `Prompts` (like `list_mcp_assets_prompt`) to understand what workflows are available and delegates these high-level tasks to specialized agents via A2A. | Massively simplifies the orchestration logic. The orchestrator reasons about *what* needs to be done, not the low-level *how*. It plans with workflows, not atomic functions. |
+| **Specialized Agents** (e.g., `DataAnalysisAgent`) | **Prompts** (Execution) | **Task Fulfillment.** Receives a high-level task from the Orchestrator (e.g., "run the `correlation_investigation_prompt`"). Its primary job is to connect to the correct MCP server and invoke the specified `Prompt`, returning the result. | These agents become simple, reliable "pass-throughs." Their logic is minimal, making them easy to build, test, and maintain. The complex workflow logic resides on the MCP server. |
+| **`Executor`** (for simple, direct tasks) | **Tools** (Low-Level) | **Reliable Execution.** When a task is simple and maps to a single action (e.g., "load this dataset"), the Executor can call the `tools/list` method to get the exact `inputSchema` for validation before making a `tools/call`. | This ensures type safety and reduces runtime errors for simple, atomic operations, addressing the "semantic mismatch" risk for non-Prompt-based interactions. |
+
+By adopting this model, our system becomes a hierarchy of intelligence. The `Chief Orchestrator` makes strategic decisions by consulting high-level `Prompts`. The specialized MCP servers encapsulate domain expertise within their own `Prompt`-driven workflows. This is a robust, scalable, and maintainable path to building a truly advanced agentic platform.
+
+## Future Work (Thoughts)
+
